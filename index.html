@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>沖繩 5 天 4 夜老幼同樂自駕助手</title>
+    <style>
+        :root {
+            --primary-color: #008080;
+            --secondary-color: #e6f2f2;
+            --accent-color: #ff6b6b;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            padding-bottom: 60px;
+        }
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 1.5rem 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        header h1 { margin: 0; font-size: 1.5rem; }
+        header p { margin: 0.3rem 0 0; font-size: 0.9rem; opacity: 0.9; }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        /* 主頁籤導覽列 */
+        .tab-nav {
+            display: flex;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 1.2rem;
+            overflow-x: auto;
+        }
+        .tab-btn {
+            flex: 1;
+            min-width: 65px;
+            padding: 0.8rem 0.2rem;
+            text-align: center;
+            border: none;
+            background: none;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #666;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+        .tab-btn.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+            background-color: var(--secondary-color);
+        }
+        .tab-btn.book-tab { color: var(--accent-color); }
+        .tab-btn.book-tab.active {
+            border-bottom-color: var(--accent-color);
+            background-color: #fff0f0;
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* 新增/編輯行程表單 */
+        .add-event-box {
+            background: #ffffff;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1.2rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            border: 1px dashed var(--primary-color);
+        }
+        .add-event-box h4 { margin: 0 0 0.6rem 0; color: var(--primary-color); font-size: 0.95rem; }
+        .event-form-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+        .event-form-row input, .event-form-row textarea {
+            padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.85rem;
+        }
+        .input-time { flex: 1; min-width: 80px; }
+        .input-title { flex: 2; min-width: 150px; }
+        .input-query { width: 100%; }
+        .input-desc { width: 100%; height: 45px; resize: vertical; }
+        .btn-add-event {
+            background: var(--primary-color); color: white; border: none;
+            padding: 0.6rem 1rem; border-radius: 6px; cursor: pointer;
+            font-weight: bold; font-size: 0.85rem; width: 100%;
+        }
+
+        /* 拖曳時間軸 */
+        .timeline {
+            position: relative;
+            padding-left: 15px;
+            border-left: 3px solid var(--primary-color);
+        }
+        .event-card {
+            position: relative;
+            background: white;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            cursor: grab;
+            transition: transform 0.2s, box-shadow 0.2s;
+            user-select: none;
+        }
+        .event-card:active { cursor: grabbing; }
+        .event-card.dragging {
+            opacity: 0.5;
+            background: #e6f2f2;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        }
+        .event-card::before {
+            content: '';
+            position: absolute;
+            left: -22px;
+            top: 18px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            border: 2px solid white;
+        }
+        .event-header { display: flex; justify-content: space-between; align-items: center; }
+        .drag-handle {
+            cursor: grab;
+            color: #aaa;
+            font-size: 1.2rem;
+            margin-right: 0.4rem;
+            display: inline-block;
+        }
+        .time-tag {
+            display: inline-block;
+            background: var(--secondary-color);
+            color: var(--primary-color);
+            font-weight: bold;
+            font-size: 0.8rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+        }
+        .event-title { font-size: 1.05rem; font-weight: bold; margin: 0.4rem 0 0.3rem 0; }
+        .event-desc { font-size: 0.9rem; color: #555; margin-bottom: 0.6rem; white-space: pre-line; }
+
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            background-color: #4285F4;
+            color: white;
+            text-decoration: none;
+            font-size: 0.85rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-top: 0.3rem;
+            box-shadow: 0 2px 4px rgba(66,133,244,0.3);
+        }
+
+        .btn-action { background: none; border: none; cursor: pointer; font-size: 0.85rem; padding: 0.1rem 0.3rem; opacity: 0.7; }
+        .btn-action:hover { opacity: 1; }
+
+        /* 記帳頁樣式 */
+        .expense-card {
+            background: var(--card-bg); border-radius: 12px; padding: 1.2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 1.2rem;
+            border-top: 4px solid var(--accent-color);
+        }
+        .expense-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #eee;
+        }
+        .expense-title { font-weight: bold; font-size: 1.2rem; }
+        .expense-totals { text-align: right; }
+        .total-jpy { font-size: 1.3rem; font-weight: bold; color: var(--accent-color); }
+        .total-twd { font-size: 0.85rem; color: #666; }
+        
+        .rate-setting {
+            font-size: 0.85rem; color: #666; margin-bottom: 1rem;
+            display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
+            background: #f9f9f9; padding: 0.5rem 0.8rem; border-radius: 6px;
+        }
+        .rate-setting input { width: 65px; padding: 0.2rem 0.3rem; font-size: 0.85rem; border: 1px solid #ccc; border-radius: 4px; }
+        .btn-update-rate {
+            background: #e7f5ff; color: #1c7ed6; border: 1px solid #74c0fc;
+            padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-weight: bold;
+        }
+
+        .expense-form {
+            display: flex; flex-direction: column; gap: 0.6rem;
+            background: #fafafa; padding: 1rem; border-radius: 8px;
+            border: 1px solid #eee; margin-bottom: 1.2rem;
+        }
+        .form-row { display: flex; gap: 0.5rem; }
+        .expense-form input, .expense-form select { padding: 0.6rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; }
+        .input-date { flex: 1.2; }
+        .input-name { flex: 2; }
+        .input-cost { flex: 1.2; }
+        .select-pay { flex: 1; }
+
+        .day-group { margin-bottom: 1.5rem; background: white; border-radius: 8px; padding: 0.8rem 1rem; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+        .day-group-header {
+            display: flex; justify-content: space-between; font-weight: bold; font-size: 0.95rem;
+            color: var(--primary-color); padding-bottom: 0.4rem; border-bottom: 2px solid var(--secondary-color); margin-bottom: 0.5rem;
+        }
+        .expense-list { list-style: none; padding: 0; margin: 0; }
+        .expense-item { padding: 0.5rem 0; border-bottom: 1px dashed #eee; font-size: 0.85rem; }
+        .expense-item:last-child { border-bottom: none; }
+        .item-top { display: flex; justify-content: space-between; align-items: center; }
+        .item-detail { display: flex; align-items: center; gap: 0.3rem; }
+        .time-stamp { font-size: 0.75rem; color: #888; background: #f0f0f0; padding: 0.1rem 0.3rem; border-radius: 3px; }
+        .pay-badge { font-size: 0.75rem; padding: 0.1rem 0.3rem; border-radius: 3px; font-weight: bold; }
+        .pay-cash { background: #e6fcf5; color: #0ca678; }
+        .pay-card { background: #e7f5ff; color: #1c7ed6; }
+        .fee-note { font-size: 0.75rem; color: #d9480f; margin-top: 0.2rem; padding-left: 0.2rem; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🚗 沖繩 5 天 4 夜慢活助手</h1>
+    <p>全平面道路漫遊・無障礙友善行程</p>
+</header>
+
+<div class="container">
+
+    <!-- 主頁籤導覽列 -->
+    <div class="tab-nav">
+        <button class="tab-btn active" onclick="openTab(event, 'd1')">Day 1<br><small>9/9</small></button>
+        <button class="tab-btn" onclick="openTab(event, 'd2')">Day 2<br><small>9/10</small></button>
+        <button class="tab-btn" onclick="openTab(event, 'd3')">Day 3<br><small>9/11</small></button>
+        <button class="tab-btn" onclick="openTab(event, 'd4')">Day 4<br><small>9/12</small></button>
+        <button class="tab-btn" onclick="openTab(event, 'd5')">Day 5<br><small>9/13</small></button>
+        <button class="tab-btn book-tab" onclick="openTab(event, 'book')">💰 記帳本<br><small>獨立頁</small></button>
+    </div>
+
+    <!-- 行程容器 (支持拖曳排序與導航設定) -->
+    <div id="itinerary-container"></div>
+
+    <!-- 獨立記帳頁面 -->
+    <div id="book" class="tab-content">
+        <div class="expense-card">
+            <div class="expense-header">
+                <span class="expense-title">💰 旅程總消費</span>
+                <div class="expense-totals">
+                    <div class="total-jpy">¥<span id="total-jpy">0</span></div>
+                    <div class="total-twd">約 NT$ <span id="total-twd">0</span></div>
+                </div>
+            </div>
+            
+            <div class="rate-setting">
+                <span>💱 匯率設定:</span>
+                <input type="number" id="exchange-rate" value="0.22" step="0.0001" onchange="updateTotals()">
+                <button class="btn-update-rate" onclick="fetchLiveRate()">🔄 自動抓即時匯率</button>
+                <span id="rate-status" style="font-size:0.75rem; color:#888;"></span>
+            </div>
+
+            <div class="expense-form">
+                <div class="form-row">
+                    <select id="exp-day" class="input-date">
+                        <option value="Day 1 (9/9)">Day 1 (9/9)</option>
+                        <option value="Day 2 (9/10)">Day 2 (9/10)</option>
+                        <option value="Day 3 (9/11)">Day 3 (9/11)</option>
+                        <option value="Day 4 (9/12)">Day 4 (9/12)</option>
+                        <option value="Day 5 (9/13)">Day 5 (9/13)</option>
+                    </select>
+                    <select id="exp-pay" class="select-pay">
+                        <option value="card">刷卡 (+1.5%)</option>
+                        <option value="cash">現金</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <input type="text" id="exp-name" class="input-name" placeholder="消費項目 (如: 燒肉王)">
+                    <input type="number" id="exp-cost" class="input-cost" placeholder="日圓金額">
+                </div>
+                <button class="btn-add-event" id="btn-save-exp" onclick="addExpense()">新增消費紀錄</button>
+            </div>
+
+            <div id="classified-expense-container"></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // 預設行程資料 (包含精準導航查詢關鍵字)
+    let itineraryData = {
+        d1: [
+            { id: 'ev_1', time: "下午", title: "✈️ 那霸機場 & 領車", desc: "抵達領車，確認 Toyota Voxy 80 乘坐空間，並於現場借用長輩輕便輪椅。", query: "Naha Airport" },
+            { id: 'ev_2', time: "下午採購", title: "🛒 好市多 沖繩南城倉庫店", desc: "採購 Villa 所需食材、零食與酒水。賣場無障礙設施完善。", query: "Costco Okinawa Nanjo" },
+            { id: 'ev_3', time: "傍晚 - 晚上", title: "🏡 恩納村海景 Villa (Goya House)", desc: "沿國道 58 號平面道路北上，欣賞黃昏海岸線後入住。", query: "Goya House Onna" }
+        ],
+        d2: [
+            { id: 'ev_4', time: "07:00", title: "🥞 Paanilani (パニラニ) 鬆餅", desc: "06:45 出發，07:00 營業即抵達。品嚐 Q 彈鹹甜美式鬆餅 (10人需拆桌)。", query: "Paanilani Pancake" },
+            { id: 'ev_5', time: "10:00 - 13:30", title: "🐋 沖繩美麗海水族館", desc: "至服務中心借用免費輪椅，帶長輩走無障礙斜坡觀賞「黑潮之海」鯨鯊。", query: "Okinawa Churaumi Aquarium" },
+            { id: 'ev_6', time: "14:30", title: "🐘 萬座毛 (Manzamo)", desc: "步道平坦無障礙，適合長輩推輪椅慢慢散步看海拍照。", query: "Manzamo" }
+        ],
+        d3: [
+            { id: 'ev_7', time: "11:15", title: "🍣 回轉壽司市場 美濱店", desc: "11:30 營業前抵達候位。順遊旁邊的 Makeman 美濱店 逛手工具大賣場。", query: "Gourmet Kaiten-sushi Yoshi Mihama" },
+            { id: 'ev_8', time: "13:30 - 17:30", title: "🛍️ 永旺夢樂城沖繩來客夢 (AEON MALL)", desc: "分工血拼：先生逛 2F Mont-bell、老婆買服飾、長輩沙發區休息看水族缸。", query: "AEON MALL Okinawa Rycom" },
+            { id: 'ev_9', time: "傍晚", title: "🏨 那霸時之宿 (Toki No Yado Naha)", desc: "入住那霸市區飯店，晚上於國際通周邊散步用餐。", query: "Toki No Yado Naha" }
+        ],
+        d4: [
+            { id: 'ev_10', time: "上午", title: "🏯 首里城 (Shurijo Castle)", desc: "長輩務必借用輪椅，全程走無障礙電梯與緩坡，避開階梯。", query: "Shurijo Castle" },
+            { id: 'ev_11', time: "下午", title: "⛩️ 波上宮 & 波之上沙灘", desc: "長輩輪椅於沙灘涼亭看海，其餘家人參拜神社與小孩踏浪。", query: "Naminoue Shrine" },
+            { id: 'ev_12', time: "18:00", title: "🥩 燒肉王 (焼肉きんぐ) 那霸久茂地店", desc: "國王套餐燒肉吃到飽！建議搭乘計程車前往，省去市區停車煩惱。", query: "Yakiniku King Naha Kumoji" }
+        ],
+        d5: [
+            { id: 'ev_13', time: "09:30", title: "🛠️ Kohnan PRO 豐崎店", desc: "大型五金大賣場，採買日系手工具、電動工具與生活小物。", query: "Kohnan PRO Tomigusuku Toyosaki" },
+            { id: 'ev_14', time: "11:00", title: "🛍️ Ashibinaa Outlet", desc: "進行最後的伴手禮與服飾採買，商場內無障礙設施完善。", query: "Ashibinaa Outlet" },
+            { id: 'ev_15', time: "下午", title: "✈️ 那霸機場還車 & 返台", desc: "開車前往機場還車，辦理登機，搭乘華航班機返回台中。", query: "Naha Airport" }
+        ]
+    };
+
+    // 渲染行程 HTML
+    function renderItineraries() {
+        let container = document.getElementById("itinerary-container");
+        container.innerHTML = "";
+
+        Object.keys(itineraryData).forEach((dayKey, index) => {
+            let dayNum = index + 1;
+            let isActive = dayKey === 'd1' ? 'active' : '';
+
+            let dayHtml = `
+                <div id="${dayKey}" class="tab-content ${isActive}">
+                    <div class="add-event-box">
+                        <h4>➕ 為 Day ${dayNum} 新增/編輯景點與導航設定</h4>
+                        <div class="event-form-row">
+                            <input type="text" id="${dayKey}-time" class="input-time" placeholder="時間 (如: 15:30)">
+                            <input type="text" id="${dayKey}-title" class="input-title" placeholder="景點或活動名稱">
+                        </div>
+                        <div class="event-form-row">
+                            <input type="text" id="${dayKey}-query" class="input-query" placeholder="📍 Google 地圖搜尋關鍵字 / 地址 (若留空則採名稱)">
+                        </div>
+                        <div class="event-form-row">
+                            <textarea id="${dayKey}-desc" class="input-desc" placeholder="備註或注意事項..."></textarea>
+                        </div>
+                        <button class="btn-add-event" id="${dayKey}-btn" onclick="saveEvent('${dayKey}')">➕ 加入 Day ${dayNum} 行程</button>
+                    </div>
+
+                    <div class="timeline" id="${dayKey}-timeline" data-day="${dayKey}">
+            `;
+
+            itineraryData[dayKey].forEach((event, eventIdx) => {
+                let navQuery = event.query && event.query.trim() !== "" ? event.query : event.title;
+                dayHtml += `
+                    <div class="event-card" draggable="true" data-index="${eventIdx}">
+                        <div class="event-header">
+                            <div>
+                                <span class="drag-handle">☰</span>
+                                <span class="time-tag">${event.time}</span>
+                            </div>
+                            <div>
+                                <button class="btn-action" onclick="editEvent('${dayKey}', ${eventIdx})">✏️</button>
+                                <button class="btn-action" onclick="deleteEvent('${dayKey}', ${eventIdx})">🗑️</button>
+                            </div>
+                        </div>
+                        <div class="event-title">${event.title}</div>
+                        <div class="event-desc">${event.desc}</div>
+                        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(navQuery)}" target="_blank" class="nav-btn">📍 開啟 Google 導航</a>
+                    </div>
+                `;
+            });
+
+            dayHtml += `
+                    </div>
+                </div>
+            `;
+            container.innerHTML += dayHtml;
+        });
+
+        initDragAndDrop();
+    }
+
+    // 拖曳排序邏輯 (HTML5 Drag and Drop)
+    function initDragAndDrop() {
+        let timelines = document.querySelectorAll('.timeline');
+
+        timelines.forEach(timeline => {
+            let cards = timeline.querySelectorAll('.event-card');
+            let dayKey = timeline.getAttribute('data-day');
+
+            cards.forEach(card => {
+                card.addEventListener('dragstart', (e) => {
+                    card.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', card.getAttribute('data-index'));
+                });
+
+                card.addEventListener('dragend', () => {
+                    card.classList.remove('dragging');
+                    let newCards = Array.from(timeline.querySelectorAll('.event-card'));
+                    let newArray = [];
+                    newCards.forEach(c => {
+                        let oldIdx = parseInt(c.getAttribute('data-index'));
+                        newArray.push(itineraryData[dayKey][oldIdx]);
+                    });
+                    itineraryData[dayKey] = newArray;
+                    renderItineraries();
+                });
+            });
+
+            timeline.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                let draggingCard = timeline.querySelector('.dragging');
+                let afterElement = getDragAfterElement(timeline, e.clientY);
+                if (afterElement == null) {
+                    timeline.appendChild(draggingCard);
+                } else {
+                    timeline.insertBefore(draggingCard, afterElement);
+                }
+            });
+        });
+    }
+
+    function getDragAfterElement(container, y) {
+        let draggableElements = [...container.querySelectorAll('.event-card:not(.dragging)')];
+
+        return draggableElements.reduce((closest, child) => {
+            let box = child.getBoundingClientRect();
+            let offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    let activeEditingDay = null;
+    let activeEditingIndex = -1;
+
+    function saveEvent(dayKey) {
+        let time = document.getElementById(`${dayKey}-time`).value;
+        let title = document.getElementById(`${dayKey}-title`).value;
+        let query = document.getElementById(`${dayKey}-query`).value;
+        let desc = document.getElementById(`${dayKey}-desc`).value;
+
+        if (title) {
+            let navQuery = query && query.trim() !== "" ? query : title;
+
+            if (activeEditingDay === dayKey && activeEditingIndex !== -1) {
+                itineraryData[dayKey][activeEditingIndex] = { id: 'ev_' + Date.now(), time, title, desc, query: navQuery };
+                activeEditingDay = null;
+                activeEditingIndex = -1;
+            } else {
+                itineraryData[dayKey].push({ id: 'ev_' + Date.now(), time, title, desc, query: navQuery });
+            }
+            renderItineraries();
+        }
+    }
+
+    function deleteEvent(dayKey, index) {
+        itineraryData[dayKey].splice(index, 1);
+        renderItineraries();
+    }
+
+    function editEvent(dayKey, index) {
+        activeEditingDay = dayKey;
+        activeEditingIndex = index;
+        let item = itineraryData[dayKey][index];
+
+        document.getElementById(`${dayKey}-time`).value = item.time;
+        document.getElementById(`${dayKey}-title`).value = item.title;
+        document.getElementById(`${dayKey}-query`).value = item.query || item.title;
+        document.getElementById(`${dayKey}-desc`).value = item.desc;
+        document.getElementById(`${dayKey}-btn`).innerText = "💾 儲存修改內容";
+    }
+
+    // Tab 切換
+    function openTab(evt, tabId) {
+        let contents = document.getElementsByClassName("tab-content");
+        for (let c of contents) c.classList.remove("active");
+        let btns = document.getElementsByClassName("tab-btn");
+        for (let b of btns) b.classList.remove("active");
+        document.getElementById(tabId).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+
+    // 記帳頁邏輯
+    let expenses = [];
+    let editExpIndex = -1;
+
+    function autoSelectDay() {
+        let now = new Date();
+        let m = now.getMonth() + 1;
+        let d = now.getDate();
+        let daySelect = document.getElementById("exp-day");
+
+        if (m === 9) {
+            if (d === 9) daySelect.value = "Day 1 (9/9)";
+            else if (d === 10) daySelect.value = "Day 2 (9/10)";
+            else if (d === 11) daySelect.value = "Day 3 (9/11)";
+            else if (d === 12) daySelect.value = "Day 4 (9/12)";
+            else if (d === 13) daySelect.value = "Day 5 (9/13)";
+        }
+    }
+
+    async function fetchLiveRate() {
+        let statusEl = document.getElementById("rate-status");
+        statusEl.innerText = "抓取中...";
+        try {
+            let response = await fetch("https://open.er-api.com/v6/latest/JPY");
+            let data = await response.json();
+            if (data && data.rates && data.rates.TWD) {
+                let liveRate = data.rates.TWD;
+                document.getElementById("exchange-rate").value = liveRate.toFixed(4);
+                statusEl.innerText = "已更新";
+                updateTotals();
+            } else { statusEl.innerText = "失敗"; }
+        } catch (e) { statusEl.innerText = "無網路"; }
+    }
+
+    function addExpense() {
+        let day = document.getElementById("exp-day").value;
+        let name = document.getElementById("exp-name").value;
+        let costJpy = parseFloat(document.getElementById("exp-cost").value);
+        let payType = document.getElementById("exp-pay").value;
+        
+        if (name && costJpy) {
+            let now = new Date();
+            let hours = String(now.getHours()).padStart(2, '0');
+            let minutes = String(now.getMinutes()).padStart(2, '0');
+            let timeString = `${hours}:${minutes}`;
+
+            if (editExpIndex === -1) {
+                expenses.push({ day, name, costJpy, payType, time: timeString });
+            } else {
+                expenses[editExpIndex] = { day, name, costJpy, payType, time: timeString };
+                editExpIndex = -1;
+                document.getElementById("btn-save-exp").innerText = "新增消費紀錄";
+            }
+
+            renderExpenses();
+            document.getElementById("exp-name").value = "";
+            document.getElementById("exp-cost").value = "";
+        }
+    }
+
+    function deleteExpense(index) {
+        expenses.splice(index, 1);
+        renderExpenses();
+    }
+
+    function editExpense(index) {
+        editExpIndex = index;
+        let item = expenses[index];
+        document.getElementById("exp-day").value = item.day;
+        document.getElementById("exp-name").value = item.name;
+        document.getElementById("exp-cost").value = item.costJpy;
+        document.getElementById("exp-pay").value = item.payType;
+        document.getElementById("btn-save-exp").innerText = "更新消費紀錄";
+    }
+
+    function renderExpenses() {
+        let rate = parseFloat(document.getElementById("exchange-rate").value) || 0.22;
+        let container = document.getElementById("classified-expense-container");
+        container.innerHTML = "";
+        let totalJpy = 0;
+        let daysOrder = ["Day 1 (9/9)", "Day 2 (9/10)", "Day 3 (9/11)", "Day 4 (9/12)", "Day 5 (9/13)"];
+
+        daysOrder.forEach(dayName => {
+            let dayExpenses = expenses.map((item, originalIndex) => ({...item, originalIndex}))
+                                      .filter(item => item.day === dayName);
+
+            if (dayExpenses.length > 0) {
+                let daySubtotalJpy = dayExpenses.reduce((sum, item) => sum + item.costJpy, 0);
+                totalJpy += daySubtotalJpy;
+
+                let dayGroup = document.createElement("div");
+                dayGroup.className = "day-group";
+
+                let headerHtml = `
+                    <div class="day-group-header">
+                        <span>📅 ${dayName}</span>
+                        <span>小計: ¥${daySubtotalJpy.toLocaleString()} (約 NT$ ${Math.round(daySubtotalJpy * rate).toLocaleString()})</span>
+                    </div>
+                `;
+
+                let listHtml = `<ul class="expense-list">`;
+                dayExpenses.forEach(item => {
+                    let costTwd = Math.round(item.costJpy * rate);
+                    let isCard = item.payType === "card";
+                    let feeJpy = isCard ? Math.round(item.costJpy * 0.015) : 0;
+                    let feeTwd = isCard ? Math.round(feeJpy * rate) : 0;
+
+                    let payBadge = isCard ? `<span class="pay-badge pay-card">刷卡</span>` : `<span class="pay-badge pay-cash">現金</span>`;
+                    let feeNote = isCard ? `<div class="fee-note">💳 含 1.5% 海外手續費：+¥${feeJpy.toLocaleString()} (約 NT$${feeTwd})</div>` : '';
+
+                    listHtml += `
+                        <li class="expense-item">
+                            <div class="item-top">
+                                <div class="item-detail">
+                                    <span class="time-stamp">${item.time}</span>
+                                    ${payBadge}
+                                    <b>${item.name}</b>
+                                </div>
+                                <div class="item-actions">
+                                    <b>¥${item.costJpy.toLocaleString()}</b>
+                                    <span style="color:#666; font-size:0.8rem;">(NT$ ${costTwd.toLocaleString()})</span>
+                                    <button class="btn-action" onclick="editExpense(${item.originalIndex})">✏️</button>
+                                    <button class="btn-action" onclick="deleteExpense(${item.originalIndex})">🗑️</button>
+                                </div>
+                            </div>
+                            ${feeNote}
+                        </li>
+                    `;
+                });
+                listHtml += `</ul>`;
+                dayGroup.innerHTML = headerHtml + listHtml;
+                container.appendChild(dayGroup);
+            }
+        });
+
+        document.getElementById("total-jpy").innerText = totalJpy.toLocaleString();
+        document.getElementById("total-twd").innerText = Math.round(totalJpy * rate).toLocaleString();
+    }
+
+    function updateTotals() { renderExpenses(); }
+
+    window.onload = function() {
+        renderItineraries();
+        autoSelectDay();
+        fetchLiveRate();
+    };
+</script>
+
+</body>
+</html>
