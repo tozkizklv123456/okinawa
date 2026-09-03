@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>沖繩 5 天 4 夜老幼同樂自駕助手</title>
-    <!-- 引入 SheetJS 匯出 Excel 套件 -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         :root {
@@ -242,30 +241,10 @@
         .fee-note { font-size: 0.75rem; color: #d9480f; margin-top: 0.2rem; padding-left: 0.2rem; }
 
         /* 行李清單專用樣式 */
-        .pack-item.checked span.pack-text {
-            text-decoration: line-through;
-            color: #aaa;
-        }
-        .pack-checkbox {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-            accent-color: #5c7cfa;
-        }
-        .progress-bar-bg {
-            background: #eee;
-            border-radius: 10px;
-            height: 10px;
-            width: 100%;
-            margin-bottom: 1rem;
-            overflow: hidden;
-        }
-        .progress-bar-fill {
-            background: #5c7cfa;
-            height: 100%;
-            width: 0%;
-            transition: width 0.3s ease;
-        }
+        .pack-item.checked span.pack-text { text-decoration: line-through; color: #aaa; }
+        .pack-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: #5c7cfa; }
+        .progress-bar-bg { background: #eee; border-radius: 10px; height: 10px; width: 100%; margin-bottom: 1rem; overflow: hidden; }
+        .progress-bar-fill { background: #5c7cfa; height: 100%; width: 0%; transition: width 0.3s ease; }
     </style>
 </head>
 <body>
@@ -288,7 +267,7 @@
         <button class="tab-btn pack-tab" onclick="openTab(event, 'packing')">🧳 行李清單<br><small>對照表</small></button>
     </div>
 
-    <!-- 行程容器 (支持拖曳排序與導航設定) -->
+    <!-- 行程容器 -->
     <div id="itinerary-container"></div>
 
     <!-- 獨立記帳頁面 -->
@@ -346,12 +325,10 @@
                 <span id="pack-progress-text" style="font-size:0.9rem; font-weight:bold; color:#5c7cfa;">0 / 0 (0%)</span>
             </div>
 
-            <!-- 進度條 -->
             <div class="progress-bar-bg">
                 <div class="progress-bar-fill" id="pack-progress-bar"></div>
             </div>
 
-            <!-- 新增物品表單 -->
             <div class="packing-form">
                 <div class="form-row">
                     <select id="pack-cat" class="input-date">
@@ -367,7 +344,6 @@
                 <button class="btn-add-event" style="background:#5c7cfa;" onclick="addPackingItem()">➕ 新增準備物品</button>
             </div>
 
-            <!-- 分類行李清單 -->
             <div id="packing-list-container"></div>
         </div>
     </div>
@@ -534,9 +510,12 @@
         }
     }
 
+    // 加入再次確認防誤觸
     function deleteEvent(dayKey, index) {
-        itineraryData[dayKey].splice(index, 1);
-        renderItineraries();
+        if (confirm("確定要刪除這個行程嗎？")) {
+            itineraryData[dayKey].splice(index, 1);
+            renderItineraries();
+        }
     }
 
     function editEvent(dayKey, index) {
@@ -620,9 +599,20 @@
         }
     }
 
+    // 加入再次確認防誤觸
     function deleteExpense(index) {
-        expenses.splice(index, 1);
-        renderExpenses();
+        if (confirm("確定要刪除這筆消費紀錄嗎？")) {
+            expenses.splice(index, 1);
+            
+            // 如果剛好正在編輯這筆被刪除的資料，清空輸入框並恢復新增按鈕狀態
+            if (editExpIndex === index) {
+                editExpIndex = -1;
+                document.getElementById("btn-save-exp").innerText = "新增消費紀錄";
+                document.getElementById("exp-name").value = "";
+                document.getElementById("exp-cost").value = "";
+            }
+            renderExpenses();
+        }
     }
 
     function editExpense(index) {
@@ -833,9 +823,12 @@
         }
     }
 
+    // 加入再次確認防誤觸
     function deletePackItem(index) {
-        packingItems.splice(index, 1);
-        renderPackingList();
+        if (confirm("確定要從清單中移除這個物品嗎？")) {
+            packingItems.splice(index, 1);
+            renderPackingList();
+        }
     }
 
     window.onload = function() {
