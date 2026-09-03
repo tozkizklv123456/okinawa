@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>沖繩 5 天 4 夜老幼同樂自駕助手</title>
+    <title>沖繩 5 天 4 夜老幼同樂自駕助手 (雲端同步版)</title>
+    <!-- 引入 SheetJS 匯出 Excel 套件 -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- 引入 Firebase SDK (Compat 版本，最適合前端網頁即時同步) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
     <style>
         :root {
             --primary-color: #008080;
@@ -38,7 +42,6 @@
             padding: 1rem;
         }
 
-        /* 主頁籤導覽列 */
         .tab-nav {
             display: flex;
             background: white;
@@ -79,7 +82,6 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* 新增/編輯行程表單 */
         .add-event-box {
             background: #ffffff;
             border-radius: 10px;
@@ -103,7 +105,6 @@
             font-weight: bold; font-size: 0.85rem; width: 100%;
         }
 
-        /* 拖曳時間軸 */
         .timeline {
             position: relative;
             padding-left: 15px;
@@ -138,44 +139,19 @@
             border: 2px solid white;
         }
         .event-header { display: flex; justify-content: space-between; align-items: center; }
-        .drag-handle {
-            cursor: grab;
-            color: #aaa;
-            font-size: 1.2rem;
-            margin-right: 0.4rem;
-            display: inline-block;
-        }
-        .time-tag {
-            display: inline-block;
-            background: var(--secondary-color);
-            color: var(--primary-color);
-            font-weight: bold;
-            font-size: 0.8rem;
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-        }
+        .drag-handle { cursor: grab; color: #aaa; font-size: 1.2rem; margin-right: 0.4rem; display: inline-block; }
+        .time-tag { display: inline-block; background: var(--secondary-color); color: var(--primary-color); font-weight: bold; font-size: 0.8rem; padding: 0.2rem 0.5rem; border-radius: 4px; }
         .event-title { font-size: 1.05rem; font-weight: bold; margin: 0.4rem 0 0.3rem 0; }
         .event-desc { font-size: 0.9rem; color: #555; margin-bottom: 0.6rem; white-space: pre-line; }
 
         .nav-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
-            background-color: #4285F4;
-            color: white;
-            text-decoration: none;
-            font-size: 0.85rem;
-            padding: 0.4rem 0.8rem;
-            border-radius: 20px;
-            font-weight: bold;
-            margin-top: 0.3rem;
-            box-shadow: 0 2px 4px rgba(66,133,244,0.3);
+            display: inline-flex; align-items: center; gap: 0.3rem; background-color: #4285F4;
+            color: white; text-decoration: none; font-size: 0.85rem; padding: 0.4rem 0.8rem;
+            border-radius: 20px; font-weight: bold; margin-top: 0.3rem; box-shadow: 0 2px 4px rgba(66,133,244,0.3);
         }
-
         .btn-action { background: none; border: none; cursor: pointer; font-size: 0.85rem; padding: 0.1rem 0.3rem; opacity: 0.7; }
         .btn-action:hover { opacity: 1; }
 
-        /* 記帳與行李清單頁樣式 */
         .expense-card, .packing-card {
             background: var(--card-bg); border-radius: 12px; padding: 1.2rem;
             box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 1.2rem;
@@ -183,52 +159,28 @@
         .expense-card { border-top: 4px solid var(--accent-color); }
         .packing-card { border-top: 4px solid #5c7cfa; }
 
-        .expense-header, .packing-header {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #eee;
-        }
+        .expense-header, .packing-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #eee; }
         .expense-title, .packing-title { font-weight: bold; font-size: 1.2rem; }
         .expense-totals { text-align: right; }
         .total-jpy { font-size: 1.3rem; font-weight: bold; color: var(--accent-color); }
         .total-twd { font-size: 0.85rem; color: #666; }
         
-        .rate-setting {
-            font-size: 0.85rem; color: #666; margin-bottom: 1rem;
-            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
-            background: #f9f9f9; padding: 0.5rem 0.8rem; border-radius: 6px;
-        }
+        .rate-setting { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; background: #f9f9f9; padding: 0.5rem 0.8rem; border-radius: 6px; font-size: 0.85rem; color: #666; margin-bottom: 1rem; }
         .rate-left { display: flex; align-items: center; gap: 0.4rem; }
         .rate-setting input { width: 65px; padding: 0.2rem 0.3rem; font-size: 0.85rem; border: 1px solid #ccc; border-radius: 4px; }
-        .btn-update-rate {
-            background: #e7f5ff; color: #1c7ed6; border: 1px solid #74c0fc;
-            padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-weight: bold;
-        }
-        .btn-export-excel {
-            background: #21a366; color: white; border: none;
-            padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: bold;
-            display: inline-flex; align-items: center; gap: 0.3rem;
-            box-shadow: 0 2px 4px rgba(33,163,102,0.2);
-        }
+        .btn-update-rate { background: #e7f5ff; color: #1c7ed6; border: 1px solid #74c0fc; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-weight: bold; }
+        .btn-export-excel { background: #21a366; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 0.3rem; box-shadow: 0 2px 4px rgba(33,163,102,0.2); }
 
-        .expense-form, .packing-form {
-            display: flex; flex-direction: column; gap: 0.6rem;
-            background: #fafafa; padding: 1rem; border-radius: 8px;
-            border: 1px solid #eee; margin-bottom: 1.2rem;
-        }
+        .expense-form, .packing-form { display: flex; flex-direction: column; gap: 0.6rem; background: #fafafa; padding: 1rem; border-radius: 8px; border: 1px solid #eee; margin-bottom: 1.2rem; }
         .form-row { display: flex; gap: 0.5rem; }
-        .expense-form input, .expense-form select, .packing-form input, .packing-form select {
-            padding: 0.6rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem;
-        }
+        .expense-form input, .expense-form select, .packing-form input, .packing-form select { padding: 0.6rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; }
         .input-date { flex: 1.2; }
         .input-name { flex: 2; }
         .input-cost { flex: 1.2; }
         .select-pay { flex: 1; }
 
         .day-group, .pack-group { margin-bottom: 1.5rem; background: white; border-radius: 8px; padding: 0.8rem 1rem; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
-        .day-group-header, .pack-group-header {
-            display: flex; justify-content: space-between; font-weight: bold; font-size: 0.95rem;
-            color: var(--primary-color); padding-bottom: 0.4rem; border-bottom: 2px solid var(--secondary-color); margin-bottom: 0.5rem;
-        }
+        .day-group-header, .pack-group-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 0.95rem; color: var(--primary-color); padding-bottom: 0.4rem; border-bottom: 2px solid var(--secondary-color); margin-bottom: 0.5rem; }
         .expense-list, .pack-list { list-style: none; padding: 0; margin: 0; }
         .expense-item, .pack-item { padding: 0.5rem 0; border-bottom: 1px dashed #eee; font-size: 0.85rem; }
         .expense-item:last-child, .pack-item:last-child { border-bottom: none; }
@@ -240,7 +192,6 @@
         .pay-card { background: #e7f5ff; color: #1c7ed6; }
         .fee-note { font-size: 0.75rem; color: #d9480f; margin-top: 0.2rem; padding-left: 0.2rem; }
 
-        /* 行李清單專用樣式 */
         .pack-item.checked span.pack-text { text-decoration: line-through; color: #aaa; }
         .pack-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: #5c7cfa; }
         .progress-bar-bg { background: #eee; border-radius: 10px; height: 10px; width: 100%; margin-bottom: 1rem; overflow: hidden; }
@@ -250,31 +201,27 @@
 <body>
 
 <header>
-    <h1>🚗 沖繩 5 天 4 夜慢活助手</h1>
+    <h1>🚗 沖繩 5 天 4 夜慢活助手 (雲端即時同步版)</h1>
     <p>全平面道路漫遊・無障礙友善行程</p>
 </header>
 
 <div class="container">
-
-    <!-- 主頁籤導覽列 -->
     <div class="tab-nav">
         <button class="tab-btn active" onclick="openTab(event, 'd1')">Day 1<br><small>9/9</small></button>
         <button class="tab-btn" onclick="openTab(event, 'd2')">Day 2<br><small>9/10</small></button>
         <button class="tab-btn" onclick="openTab(event, 'd3')">Day 3<br><small>9/11</small></button>
         <button class="tab-btn" onclick="openTab(event, 'd4')">Day 4<br><small>9/12</small></button>
         <button class="tab-btn" onclick="openTab(event, 'd5')">Day 5<br><small>9/13</small></button>
-        <button class="tab-btn book-tab" onclick="openTab(event, 'book')">💰 記帳本<br><small>獨立頁</small></button>
-        <button class="tab-btn pack-tab" onclick="openTab(event, 'packing')">🧳 行李清單<br><small>對照表</small></button>
+        <button class="tab-btn book-tab" onclick="openTab(event, 'book')">💰 記帳本<br><small>雲端同步</small></button>
+        <button class="tab-btn pack-tab" onclick="openTab(event, 'packing')">🧳 行李清單<br><small>雲端同步</small></button>
     </div>
 
-    <!-- 行程容器 -->
     <div id="itinerary-container"></div>
 
-    <!-- 獨立記帳頁面 -->
     <div id="book" class="tab-content">
         <div class="expense-card">
             <div class="expense-header">
-                <span class="expense-title">💰 旅程總消費</span>
+                <span class="expense-title">💰 旅程總消費 (全家即時同步)</span>
                 <div class="expense-totals">
                     <div class="total-jpy">¥<span id="total-jpy">0</span></div>
                     <div class="total-twd">約 NT$ <span id="total-twd">0</span></div>
@@ -288,7 +235,6 @@
                     <button class="btn-update-rate" onclick="fetchLiveRate()">🔄 即時更新</button>
                     <span id="rate-status" style="font-size:0.75rem; color:#888;"></span>
                 </div>
-                <!-- 匯出 Excel 按鈕 -->
                 <button class="btn-export-excel" onclick="exportToExcel()">📊 匯出 Excel 報表</button>
             </div>
 
@@ -317,11 +263,10 @@
         </div>
     </div>
 
-    <!-- 獨立行李準備清單頁面 -->
     <div id="packing" class="tab-content">
         <div class="packing-card">
             <div class="packing-header">
-                <span class="packing-title">🧳 出國行李準備清單</span>
+                <span class="packing-title">🧳 出國行李準備清單 (全家即時同步)</span>
                 <span id="pack-progress-text" style="font-size:0.9rem; font-weight:bold; color:#5c7cfa;">0 / 0 (0%)</span>
             </div>
 
@@ -347,208 +292,234 @@
             <div id="packing-list-container"></div>
         </div>
     </div>
-
 </div>
 
 <script>
-    // 預設行程資料
-    let itineraryData = {
+    // === Firebase 雲端資料庫設定 ===
+    const firebaseConfig = {
+        apiKey: "AIzaSyBZjKuzT5BVEaflbcWbeSiJroSSzyOtzng",
+        authDomain: "okinawa-285ae.firebaseapp.com",
+        databaseURL: "https://okinawa-285ae-default-rtdb.firebaseio.com/",
+        projectId: "okinawa-285ae",
+        storageBucket: "okinawa-285ae.firebasestorage.app",
+        messagingSenderId: "939917031597",
+        appId: "1:939917031597:web:be7b7b95bf237cb1a4ae24"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // 預設資料
+    const defaultItineraryData = {
         d1: [
-            { id: 'ev_1', time: "下午", title: "✈️ 那霸機場 & 領車", desc: "抵達領車，確認 Toyota Voxy 80 乘坐空間，並於現場借用長輩輕便輪椅。", query: "Naha Airport" },
-            { id: 'ev_2', time: "下午採購", title: "🛒 好市多 沖繩南城倉庫店", desc: "採購 Villa 所需食材、零食與酒水。賣場無障礙設施完善。", query: "Costco Okinawa Nanjo" },
-            { id: 'ev_3', time: "傍晚 - 晚上", title: "🏡 恩納村海景 Villa (Goya House)", desc: "沿國道 58 號平面道路北上，欣賞黃昏海岸線後入住。", query: "Goya House Onna" }
+            { id: 'ev_1', time: "下午", title: "✈️ 那霸機場 & 領車", desc: "抵達領車，確認 Toyota Voxy 80 乘坐空間，現場借用輕便輪椅。", query: "Naha Airport" },
+            { id: 'ev_2', time: "下午", title: "🛒 好市多 沖繩南城店", desc: "採購 Villa 零食與酒水。無障礙完善。", query: "Costco Okinawa Nanjo" },
+            { id: 'ev_3', time: "晚上", title: "🏡 恩納村海景 Villa", desc: "沿國道 58 號北上入住。", query: "Goya House Onna" }
         ],
         d2: [
-            { id: 'ev_4', time: "07:00", title: "🥞 Paanilani (パニラニ) 鬆餅", desc: "06:45 出發，07:00 營業即抵達。品嚐 Q 彈鹹甜美式鬆餅 (10人需拆桌)。", query: "Paanilani Pancake" },
-            { id: 'ev_5', time: "10:00 - 13:30", title: "🐋 沖繩美麗海水族館", desc: "至服務中心借用免費輪椅，帶長輩走無障礙斜坡觀賞「黑潮之海」鯨鯊。", query: "Okinawa Churaumi Aquarium" },
-            { id: 'ev_6', time: "14:30", title: "🐘 萬座毛 (Manzamo)", desc: "步道平坦無障礙，適合長輩推輪椅慢慢散步看海拍照。", query: "Manzamo" }
+            { id: 'ev_4', time: "07:00", title: "🥞 Paanilani 鬆餅", desc: "07:00 營業即抵達。(10人需拆桌)。", query: "Paanilani Pancake" },
+            { id: 'ev_5', time: "10:00", title: "🐋 沖繩美麗海水族館", desc: "借用免費輪椅，看黑潮之海鯨鯊。", query: "Okinawa Churaumi Aquarium" },
+            { id: 'ev_6', time: "14:30", title: "🐘 萬座毛", desc: "步道平坦，長輩推輪椅散步拍照。", query: "Manzamo" }
         ],
         d3: [
-            { id: 'ev_7', time: "11:15", title: "🍣 回轉壽司市場 美濱店", desc: "11:30 營業前抵達候位。順遊旁邊的 Makeman 美濱店 逛手工具大賣場。", query: "Gourmet Kaiten-sushi Yoshi Mihama" },
-            { id: 'ev_8', time: "13:30 - 17:30", title: "🛍️ 永旺夢樂城沖繩來客夢 (AEON MALL)", desc: "分工血拼：先生逛 2F Mont-bell、老婆買服飾、長輩沙發區休息看水族缸。", query: "AEON MALL Okinawa Rycom" },
-            { id: 'ev_9', time: "傍晚", title: "🏨 那霸時之宿 (Toki No Yado Naha)", desc: "入住那霸市區飯店，晚上於國際通周邊散步用餐。", query: "Toki No Yado Naha" }
+            { id: 'ev_7', time: "11:15", title: "🍣 回轉壽司市場 美濱店", desc: "11:30 營業前候位。順遊 Makeman。", query: "Gourmet Kaiten-sushi Yoshi Mihama" },
+            { id: 'ev_8', time: "13:30", title: "🛍️ 永旺夢樂城來客夢", desc: "分工血拼，長輩可休息看水族缸。", query: "AEON MALL Okinawa Rycom" },
+            { id: 'ev_9', time: "晚上", title: "🏨 那霸時之宿", desc: "入住飯店，晚上國際通散步。", query: "Toki No Yado Naha" }
         ],
         d4: [
-            { id: 'ev_10', time: "上午", title: "🏯 首里城 (Shurijo Castle)", desc: "長輩務必借用輪椅，全程走無障礙電梯與緩坡，避開階梯。", query: "Shurijo Castle" },
-            { id: 'ev_11', time: "下午", title: "⛩️ 波上宮 & 波之上沙灘", desc: "長輩輪椅於沙灘涼亭看海，其餘家人參拜神社與小孩踏浪。", query: "Naminoue Shrine" },
-            { id: 'ev_12', time: "18:00", title: "🥩 燒肉王 (焼肉きんぐ) 那霸久茂地店", desc: "國王套餐燒肉吃到飽！建議搭乘計程車前往，省去市區停車煩惱。", query: "Yakiniku King Naha Kumoji" }
+            { id: 'ev_10', time: "上午", title: "🏯 首里城", desc: "長輩借用輪椅，走無障礙電梯避階梯。", query: "Shurijo Castle" },
+            { id: 'ev_11', time: "下午", title: "⛩️ 波上宮", desc: "輪椅於涼亭看海，其餘參拜。", query: "Naminoue Shrine" },
+            { id: 'ev_12', time: "18:00", title: "🥩 燒肉王 那霸久茂地店", desc: "國王套餐！建議搭計程車前往。", query: "Yakiniku King Naha Kumoji" }
         ],
         d5: [
-            { id: 'ev_13', time: "09:30", title: "🛠️ Kohnan PRO 豐崎店", desc: "大型五金大賣場，採買日系手工具、電動工具與生活小物。", query: "Kohnan PRO Tomigusuku Toyosaki" },
-            { id: 'ev_14', time: "11:00", title: "🛍️ Ashibinaa Outlet", desc: "進行最後的伴手禮與服飾採買，商場內無障礙設施完善。", query: "Ashibinaa Outlet" },
-            { id: 'ev_15', time: "下午", title: "✈️ 那霸機場還車 & 返台", desc: "開車前往機場還車，辦理登機，搭乘華航班機返回台中。", query: "Naha Airport" }
+            { id: 'ev_13', time: "09:30", title: "🛠️ Kohnan PRO 豐崎店", desc: "採買日系手工具與生活小物。", query: "Kohnan PRO Tomigusuku Toyosaki" },
+            { id: 'ev_14', time: "11:00", title: "🛍️ Ashibinaa Outlet", desc: "最後伴手禮採買，無障礙完善。", query: "Ashibinaa Outlet" },
+            { id: 'ev_15', time: "下午", title: "✈️ 那霸機場返台", desc: "還車辦登機，搭華航回台中。", query: "Naha Airport" }
         ]
     };
 
+    const defaultPackingItems = [
+        { cat: "📄 證件與重要文件", name: "護照 (確認6個月以上有效期)", checked: false },
+        { cat: "📄 證件與重要文件", name: "台灣駕照原件 + 日文翻譯本", checked: false },
+        { cat: "📄 證件與重要文件", name: "日幣現金與信用卡 (開通海外刷卡)", checked: false },
+        { cat: "📱 電子產品與充電", name: "手機、Garmin 手錶與充電線", checked: false },
+        { cat: "📱 電子產品與充電", name: "日本 eSIM / 上網卡", checked: false },
+        { cat: "♿ 長輩照護用品", name: "長輩折疊輕便輪椅", checked: false },
+        { cat: "♿ 長輩照護用品", name: "慢性病藥物與處方箋", checked: false },
+        { cat: "👶 小孩生活用品", name: "兒童輕便推車 (2歲小孩)", checked: false },
+        { cat: "👕 衣物與個人用品", name: "換洗衣物、薄外套", checked: false },
+        { cat: "💊 藥品與日常護理", name: "常備藥品 (感冒、暈車藥)", checked: false }
+    ];
+
+    let itineraryData = {};
+    let expenses = [];
+    let packingItems = [];
+
+    // === 即時從雲端監聽資料變更 ===
+    function initFirebaseSync() {
+        // 1. 監聽行程
+        db.ref('itinerary').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                itineraryData = data;
+            } else {
+                itineraryData = defaultItineraryData;
+                db.ref('itinerary').set(defaultItineraryData);
+            }
+            renderItineraries();
+        });
+
+        // 2. 監聽記帳
+        db.ref('expenses').on('value', (snapshot) => {
+            const data = snapshot.val();
+            expenses = data ? data : [];
+            renderExpenses();
+        });
+
+        // 3. 監聽行李清單
+        db.ref('packing').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                packingItems = data;
+            } else {
+                packingItems = defaultPackingItems;
+                db.ref('packing').set(defaultPackingItems);
+            }
+            renderPackingList();
+        });
+    }
+
+    // === 行程表邏輯 ===
     function renderItineraries() {
         let container = document.getElementById("itinerary-container");
         container.innerHTML = "";
-
         Object.keys(itineraryData).forEach((dayKey, index) => {
             let dayNum = index + 1;
             let isActive = dayKey === 'd1' ? 'active' : '';
-
             let dayHtml = `
                 <div id="${dayKey}" class="tab-content ${isActive}">
                     <div class="add-event-box">
-                        <h4>➕ 為 Day ${dayNum} 新增/編輯景點與導航設定</h4>
+                        <h4>➕ 為 Day ${dayNum} 新增/編輯景點</h4>
                         <div class="event-form-row">
-                            <input type="text" id="${dayKey}-time" class="input-time" placeholder="時間 (如: 15:30)">
-                            <input type="text" id="${dayKey}-title" class="input-title" placeholder="景點或活動名稱">
+                            <input type="text" id="${dayKey}-time" class="input-time" placeholder="時間">
+                            <input type="text" id="${dayKey}-title" class="input-title" placeholder="景點名稱">
                         </div>
-                        <div class="event-form-row">
-                            <input type="text" id="${dayKey}-query" class="input-query" placeholder="📍 Google 地圖搜尋關鍵字 / 地址 (若留空則採名稱)">
-                        </div>
-                        <div class="event-form-row">
-                            <textarea id="${dayKey}-desc" class="input-desc" placeholder="備註或注意事項..."></textarea>
-                        </div>
-                        <button class="btn-add-event" id="${dayKey}-btn" onclick="saveEvent('${dayKey}')">➕ 加入 Day ${dayNum} 行程</button>
+                        <div class="event-form-row"><input type="text" id="${dayKey}-query" class="input-query" placeholder="📍 導航搜尋字 (留空則用名稱)"></div>
+                        <div class="event-form-row"><textarea id="${dayKey}-desc" class="input-desc" placeholder="備註..."></textarea></div>
+                        <button class="btn-add-event" id="${dayKey}-btn" onclick="saveEvent('${dayKey}')">➕ 加入 Day ${dayNum}</button>
                     </div>
-
                     <div class="timeline" id="${dayKey}-timeline" data-day="${dayKey}">
             `;
-
-            itineraryData[dayKey].forEach((event, eventIdx) => {
-                let navQuery = event.query && event.query.trim() !== "" ? event.query : event.title;
-                dayHtml += `
-                    <div class="event-card" draggable="true" data-index="${eventIdx}">
-                        <div class="event-header">
-                            <div>
-                                <span class="drag-handle">☰</span>
-                                <span class="time-tag">${event.time}</span>
+            if (itineraryData[dayKey]) {
+                itineraryData[dayKey].forEach((event, eventIdx) => {
+                    let navQuery = event.query && event.query.trim() !== "" ? event.query : event.title;
+                    dayHtml += `
+                        <div class="event-card" draggable="true" data-index="${eventIdx}">
+                            <div class="event-header">
+                                <div><span class="drag-handle">☰</span><span class="time-tag">${event.time}</span></div>
+                                <div>
+                                    <button class="btn-action" onclick="editEvent('${dayKey}', ${eventIdx})">✏️</button>
+                                    <button class="btn-action" onclick="deleteEvent('${dayKey}', ${eventIdx})">🗑️</button>
+                                </div>
                             </div>
-                            <div>
-                                <button class="btn-action" onclick="editEvent('${dayKey}', ${eventIdx})">✏️</button>
-                                <button class="btn-action" onclick="deleteEvent('${dayKey}', ${eventIdx})">🗑️</button>
-                            </div>
+                            <div class="event-title">${event.title}</div>
+                            <div class="event-desc">${event.desc}</div>
+                            <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(navQuery)}" target="_blank" class="nav-btn">📍 開啟導航</a>
                         </div>
-                        <div class="event-title">${event.title}</div>
-                        <div class="event-desc">${event.desc}</div>
-                        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(navQuery)}" target="_blank" class="nav-btn">📍 開啟 Google 導航</a>
-                    </div>
-                `;
-            });
-
-            dayHtml += `
-                    </div>
-                </div>
-            `;
+                    `;
+                });
+            }
+            dayHtml += `</div></div>`;
             container.innerHTML += dayHtml;
         });
-
         initDragAndDrop();
     }
 
     function initDragAndDrop() {
-        let timelines = document.querySelectorAll('.timeline');
-        timelines.forEach(timeline => {
-            let cards = timeline.querySelectorAll('.event-card');
+        document.querySelectorAll('.timeline').forEach(timeline => {
             let dayKey = timeline.getAttribute('data-day');
-
-            cards.forEach(card => {
+            timeline.querySelectorAll('.event-card').forEach(card => {
                 card.addEventListener('dragstart', (e) => {
                     card.classList.add('dragging');
                     e.dataTransfer.setData('text/plain', card.getAttribute('data-index'));
                 });
-
                 card.addEventListener('dragend', () => {
                     card.classList.remove('dragging');
-                    let newCards = Array.from(timeline.querySelectorAll('.event-card'));
                     let newArray = [];
-                    newCards.forEach(c => {
-                        let oldIdx = parseInt(c.getAttribute('data-index'));
-                        newArray.push(itineraryData[dayKey][oldIdx]);
+                    Array.from(timeline.querySelectorAll('.event-card')).forEach(c => {
+                        newArray.push(itineraryData[dayKey][parseInt(c.getAttribute('data-index'))]);
                     });
                     itineraryData[dayKey] = newArray;
-                    renderItineraries();
+                    db.ref('itinerary').set(itineraryData); // 同步到雲端
                 });
             });
-
             timeline.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 let draggingCard = timeline.querySelector('.dragging');
                 let afterElement = getDragAfterElement(timeline, e.clientY);
-                if (afterElement == null) {
-                    timeline.appendChild(draggingCard);
-                } else {
-                    timeline.insertBefore(draggingCard, afterElement);
-                }
+                if (afterElement == null) timeline.appendChild(draggingCard);
+                else timeline.insertBefore(draggingCard, afterElement);
             });
         });
     }
 
     function getDragAfterElement(container, y) {
-        let draggableElements = [...container.querySelectorAll('.event-card:not(.dragging)')];
-        return draggableElements.reduce((closest, child) => {
+        return [...container.querySelectorAll('.event-card:not(.dragging)')].reduce((closest, child) => {
             let box = child.getBoundingClientRect();
             let offset = y - box.top - box.height / 2;
-            if (offset < 0 && offset > closest.offset) {
-                return { offset: offset, element: child };
-            } else { return closest; }
+            if (offset < 0 && offset > closest.offset) return { offset: offset, element: child };
+            else return closest;
         }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
 
-    let activeEditingDay = null;
-    let activeEditingIndex = -1;
-
+    let activeEditingDay = null, activeEditingIndex = -1;
     function saveEvent(dayKey) {
         let time = document.getElementById(`${dayKey}-time`).value;
         let title = document.getElementById(`${dayKey}-title`).value;
         let query = document.getElementById(`${dayKey}-query`).value;
         let desc = document.getElementById(`${dayKey}-desc`).value;
-
         if (title) {
             let navQuery = query && query.trim() !== "" ? query : title;
+            if (!itineraryData[dayKey]) itineraryData[dayKey] = [];
             if (activeEditingDay === dayKey && activeEditingIndex !== -1) {
                 itineraryData[dayKey][activeEditingIndex] = { id: 'ev_' + Date.now(), time, title, desc, query: navQuery };
-                activeEditingDay = null;
-                activeEditingIndex = -1;
+                activeEditingDay = null; activeEditingIndex = -1;
             } else {
                 itineraryData[dayKey].push({ id: 'ev_' + Date.now(), time, title, desc, query: navQuery });
             }
-            renderItineraries();
+            db.ref('itinerary').set(itineraryData); // 同步到雲端
         }
     }
 
-    // 加入再次確認防誤觸
     function deleteEvent(dayKey, index) {
         if (confirm("確定要刪除這個行程嗎？")) {
             itineraryData[dayKey].splice(index, 1);
-            renderItineraries();
+            db.ref('itinerary').set(itineraryData); // 同步到雲端
         }
     }
 
     function editEvent(dayKey, index) {
-        activeEditingDay = dayKey;
-        activeEditingIndex = index;
+        activeEditingDay = dayKey; activeEditingIndex = index;
         let item = itineraryData[dayKey][index];
-
         document.getElementById(`${dayKey}-time`).value = item.time;
         document.getElementById(`${dayKey}-title`).value = item.title;
         document.getElementById(`${dayKey}-query`).value = item.query || item.title;
         document.getElementById(`${dayKey}-desc`).value = item.desc;
-        document.getElementById(`${dayKey}-btn`).innerText = "💾 儲存修改內容";
+        document.getElementById(`${dayKey}-btn`).innerText = "💾 儲存修改";
     }
 
     function openTab(evt, tabId) {
-        let contents = document.getElementsByClassName("tab-content");
-        for (let c of contents) c.classList.remove("active");
-        let btns = document.getElementsByClassName("tab-btn");
-        for (let b of btns) b.classList.remove("active");
+        document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
         document.getElementById(tabId).classList.add("active");
         evt.currentTarget.classList.add("active");
     }
 
-    // --- 記帳與一鍵匯出 Excel 邏輯 ---
-    let expenses = [];
+    // === 記帳邏輯 ===
     let editExpIndex = -1;
-
     function autoSelectDay() {
-        let now = new Date();
-        let m = now.getMonth() + 1;
-        let d = now.getDate();
+        let d = new Date().getDate(), m = new Date().getMonth() + 1;
         let daySelect = document.getElementById("exp-day");
-
         if (m === 9) {
             if (d === 9) daySelect.value = "Day 1 (9/9)";
             else if (d === 10) daySelect.value = "Day 2 (9/10)";
@@ -564,278 +535,126 @@
         try {
             let response = await fetch("https://open.er-api.com/v6/latest/JPY");
             let data = await response.json();
-            if (data && data.rates && data.rates.TWD) {
-                let liveRate = data.rates.TWD;
-                document.getElementById("exchange-rate").value = liveRate.toFixed(4);
+            if (data?.rates?.TWD) {
+                document.getElementById("exchange-rate").value = data.rates.TWD.toFixed(4);
                 statusEl.innerText = "已更新";
                 updateTotals();
-            } else { statusEl.innerText = "失敗"; }
+            }
         } catch (e) { statusEl.innerText = "無網路"; }
     }
 
     function addExpense() {
-        let day = document.getElementById("exp-day").value;
-        let name = document.getElementById("exp-name").value;
-        let costJpy = parseFloat(document.getElementById("exp-cost").value);
-        let payType = document.getElementById("exp-pay").value;
-        
+        let day = document.getElementById("exp-day").value, name = document.getElementById("exp-name").value;
+        let costJpy = parseFloat(document.getElementById("exp-cost").value), payType = document.getElementById("exp-pay").value;
         if (name && costJpy) {
-            let now = new Date();
-            let hours = String(now.getHours()).padStart(2, '0');
-            let minutes = String(now.getMinutes()).padStart(2, '0');
-            let timeString = `${hours}:${minutes}`;
-
+            let timeString = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`;
             if (editExpIndex === -1) {
                 expenses.push({ day, name, costJpy, payType, time: timeString });
             } else {
                 expenses[editExpIndex] = { day, name, costJpy, payType, time: timeString };
-                editExpIndex = -1;
+                editExpIndex = -1; 
                 document.getElementById("btn-save-exp").innerText = "新增消費紀錄";
             }
-
-            renderExpenses();
-            document.getElementById("exp-name").value = "";
+            db.ref('expenses').set(expenses); // 同步到雲端
+            document.getElementById("exp-name").value = ""; 
             document.getElementById("exp-cost").value = "";
         }
     }
 
-    // 加入再次確認防誤觸
     function deleteExpense(index) {
-        if (confirm("確定要刪除這筆消費紀錄嗎？")) {
+        if (confirm("確定刪除這筆消費？")) {
             expenses.splice(index, 1);
-            
-            // 如果剛好正在編輯這筆被刪除的資料，清空輸入框並恢復新增按鈕狀態
-            if (editExpIndex === index) {
-                editExpIndex = -1;
-                document.getElementById("btn-save-exp").innerText = "新增消費紀錄";
-                document.getElementById("exp-name").value = "";
-                document.getElementById("exp-cost").value = "";
-            }
-            renderExpenses();
+            db.ref('expenses').set(expenses); // 同步到雲端
         }
     }
 
     function editExpense(index) {
-        editExpIndex = index;
-        let item = expenses[index];
+        editExpIndex = index; let item = expenses[index];
         document.getElementById("exp-day").value = item.day;
         document.getElementById("exp-name").value = item.name;
         document.getElementById("exp-cost").value = item.costJpy;
         document.getElementById("exp-pay").value = item.payType;
-        document.getElementById("btn-save-exp").innerText = "更新消費紀錄";
+        document.getElementById("btn-save-exp").innerText = "更新紀錄";
     }
 
     function renderExpenses() {
         let rate = parseFloat(document.getElementById("exchange-rate").value) || 0.22;
         let container = document.getElementById("classified-expense-container");
-        container.innerHTML = "";
-        let totalJpy = 0;
-        let daysOrder = ["Day 1 (9/9)", "Day 2 (9/10)", "Day 3 (9/11)", "Day 4 (9/12)", "Day 5 (9/13)"];
-
-        daysOrder.forEach(dayName => {
-            let dayExpenses = expenses.map((item, originalIndex) => ({...item, originalIndex}))
-                                      .filter(item => item.day === dayName);
-
+        container.innerHTML = ""; let totalJpy = 0;
+        ["Day 1 (9/9)", "Day 2 (9/10)", "Day 3 (9/11)", "Day 4 (9/12)", "Day 5 (9/13)"].forEach(dayName => {
+            let dayExpenses = expenses.map((item, originalIndex) => ({...item, originalIndex})).filter(item => item.day === dayName);
             if (dayExpenses.length > 0) {
                 let daySubtotalJpy = dayExpenses.reduce((sum, item) => sum + item.costJpy, 0);
                 totalJpy += daySubtotalJpy;
-
-                let dayGroup = document.createElement("div");
-                dayGroup.className = "day-group";
-
-                let headerHtml = `
-                    <div class="day-group-header">
-                        <span>📅 ${dayName}</span>
-                        <span>小計: ¥${daySubtotalJpy.toLocaleString()} (約 NT$ ${Math.round(daySubtotalJpy * rate).toLocaleString()})</span>
-                    </div>
-                `;
-
-                let listHtml = `<ul class="expense-list">`;
+                let dayGroup = document.createElement("div"); dayGroup.className = "day-group";
+                let listHtml = `<div class="day-group-header"><span>📅 ${dayName}</span><span>小計: ¥${daySubtotalJpy.toLocaleString()}</span></div><ul class="expense-list">`;
                 dayExpenses.forEach(item => {
-                    let costTwd = Math.round(item.costJpy * rate);
-                    let isCard = item.payType === "card";
+                    let costTwd = Math.round(item.costJpy * rate), isCard = item.payType === "card";
                     let feeJpy = isCard ? Math.round(item.costJpy * 0.015) : 0;
-                    let feeTwd = isCard ? Math.round(feeJpy * rate) : 0;
-
-                    let payBadge = isCard ? `<span class="pay-badge pay-card">刷卡</span>` : `<span class="pay-badge pay-cash">現金</span>`;
-                    let feeNote = isCard ? `<div class="fee-note">💳 含 1.5% 海外手續費：+¥${feeJpy.toLocaleString()} (約 NT$${feeTwd})</div>` : '';
-
-                    listHtml += `
-                        <li class="expense-item">
-                            <div class="item-top">
-                                <div class="item-detail">
-                                    <span class="time-stamp">${item.time}</span>
-                                    ${payBadge}
-                                    <b>${item.name}</b>
-                                </div>
-                                <div class="item-actions">
-                                    <b>¥${item.costJpy.toLocaleString()}</b>
-                                    <span style="color:#666; font-size:0.8rem;">(NT$ ${costTwd.toLocaleString()})</span>
-                                    <button class="btn-action" onclick="editExpense(${item.originalIndex})">✏️</button>
-                                    <button class="btn-action" onclick="deleteExpense(${item.originalIndex})">🗑️</button>
-                                </div>
-                            </div>
-                            ${feeNote}
-                        </li>
-                    `;
+                    listHtml += `<li class="expense-item"><div class="item-top"><div class="item-detail"><span class="time-stamp">${item.time}</span>${isCard ? `<span class="pay-badge pay-card">刷卡</span>` : `<span class="pay-badge pay-cash">現金</span>`}<b>${item.name}</b></div><div class="item-actions"><b>¥${item.costJpy.toLocaleString()}</b> <button class="btn-action" onclick="editExpense(${item.originalIndex})">✏️</button><button class="btn-action" onclick="deleteExpense(${item.originalIndex})">🗑️</button></div></div>${isCard ? `<div class="fee-note">💳 含 1.5% 刷卡手續費：+¥${feeJpy.toLocaleString()}</div>` : ''}</li>`;
                 });
-                listHtml += `</ul>`;
-                dayGroup.innerHTML = headerHtml + listHtml;
-                container.appendChild(dayGroup);
+                dayGroup.innerHTML = listHtml + `</ul>`; container.appendChild(dayGroup);
             }
         });
-
         document.getElementById("total-jpy").innerText = totalJpy.toLocaleString();
         document.getElementById("total-twd").innerText = Math.round(totalJpy * rate).toLocaleString();
     }
-
     function updateTotals() { renderExpenses(); }
 
     function exportToExcel() {
-        if (expenses.length === 0) {
-            alert("目前尚無任何消費紀錄可以匯出！");
-            return;
-        }
-
-        let rate = parseFloat(document.getElementById("exchange-rate").value) || 0.22;
-        let excelData = [];
-
-        expenses.forEach((item, index) => {
-            let costTwd = Math.round(item.costJpy * rate);
+        if (expenses.length === 0) return alert("目前尚無消費紀錄！");
+        let rate = parseFloat(document.getElementById("exchange-rate").value) || 0.22, excelData = [];
+        expenses.forEach((item, i) => {
             let isCard = item.payType === "card";
-            let feeJpy = isCard ? Math.round(item.costJpy * 0.015) : 0;
-            let feeTwd = isCard ? Math.round(feeJpy * rate) : 0;
-
-            excelData.push({
-                "項次": index + 1,
-                "消費日期": item.day,
-                "記錄時間": item.time,
-                "消費項目": item.name,
-                "支付方式": isCard ? "刷卡" : "現金",
-                "日圓金額 (JPY)": item.costJpy,
-                "折合台幣 (TWD)": costTwd,
-                "海外手續費 (JPY)": isCard ? feeJpy : 0,
-                "海外手續費 (TWD)": isCard ? feeTwd : 0,
-                "備註": isCard ? "含 1.5% 海外刷卡手續費" : ""
-            });
+            excelData.push({ "項次": i+1, "消費日期": item.day, "記錄時間": item.time, "消費項目": item.name, "支付方式": isCard?"刷卡":"現金", "日圓": item.costJpy, "台幣": Math.round(item.costJpy*rate), "備註": isCard?"含1.5%手續費":"" });
         });
-
-        let worksheet = XLSX.utils.json_to_sheet(excelData);
-        let workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "沖繩之旅消費明細");
-
-        let now = new Date();
-        let fileName = `沖繩家族旅遊消費明細_${now.getMonth()+1}月${now.getDate()}日.xlsx`;
-        XLSX.writeFile(workbook, fileName);
+        let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelData), "消費明細");
+        XLSX.writeFile(wb, `沖繩消費明細_${new Date().getMonth()+1}月${new Date().getDate()}日.xlsx`);
     }
 
-    // --- 🧳 行李清單對照表邏輯 ---
-    let defaultPackingItems = [
-        { cat: "📄 證件與重要文件", name: "護照 (確認6個月以上有效期)", checked: false },
-        { cat: "📄 證件與重要文件", name: "台灣駕照原件 + 日文翻譯本", checked: false },
-        { cat: "📄 證件與重要文件", name: "日幣現金與信用卡 (已開通海外刷卡)", checked: false },
-        { cat: "📄 證件與重要文件", name: " Visit Japan Web 入境 QR Code 截圖", checked: false },
-        { cat: "📱 電子產品與充電", name: "手機、Garmin 手錶與充電線", checked: false },
-        { cat: "📱 電子產品與充電", name: "日本 eSIM / 上網卡", checked: false },
-        { cat: "📱 電子產品與充電", name: "行動電源 (需隨身攜帶，不可托運)", checked: false },
-        { cat: "♿ 長輩照護用品", name: "長輩折疊輕便輪椅", checked: false },
-        { cat: "♿ 長輩照護用品", name: "長輩個人慢性病藥物與處方箋備份", checked: false },
-        { cat: "👶 小孩生活用品", name: "兒童輕便推車 (2歲小孩)", checked: false },
-        { cat: "👶 小孩生活用品", name: "兒童替換衣物、水壺、防曬帽", checked: false },
-        { cat: "👕 衣物與個人用品", name: "換洗衣物、薄外套 (室內冷氣)", checked: false },
-        { cat: "💊 藥品與日常護理", name: "常備藥品 (感冒、腸胃、暈車藥、創可貼)", checked: false }
-    ];
-
-    let packingItems = [...defaultPackingItems];
-
+    // === 行李清單邏輯 ===
     function renderPackingList() {
-        let container = document.getElementById("packing-list-container");
-        container.innerHTML = "";
-
-        let categories = [
-            "📄 證件與重要文件",
-            "📱 電子產品與充電",
-            "♿ 長輩照護用品",
-            "👶 小孩生活用品",
-            "👕 衣物與個人用品",
-            "💊 藥品與日常護理"
-        ];
-
-        let totalCount = packingItems.length;
-        let checkedCount = packingItems.filter(i => i.checked).length;
-        let percent = totalCount === 0 ? 0 : Math.round((checkedCount / totalCount) * 100);
-
-        document.getElementById("pack-progress-text").innerText = `${checkedCount} / ${totalCount} (${percent}%)`;
+        let container = document.getElementById("packing-list-container"); container.innerHTML = "";
+        let checkedCount = packingItems.filter(i => i.checked).length, percent = packingItems.length === 0 ? 0 : Math.round((checkedCount / packingItems.length) * 100);
+        document.getElementById("pack-progress-text").innerText = `${checkedCount} / ${packingItems.length} (${percent}%)`;
         document.getElementById("pack-progress-bar").style.width = `${percent}%`;
-
-        categories.forEach(catName => {
-            let catItems = packingItems.map((item, originalIndex) => ({...item, originalIndex}))
-                                       .filter(item => item.cat === catName);
-
+        
+        ["📄 證件與重要文件", "📱 電子產品與充電", "♿ 長輩照護用品", "👶 小孩生活用品", "👕 衣物與個人用品", "💊 藥品與日常護理"].forEach(catName => {
+            let catItems = packingItems.map((item, originalIndex) => ({...item, originalIndex})).filter(item => item.cat === catName);
             if (catItems.length > 0) {
-                let packGroup = document.createElement("div");
-                packGroup.className = "pack-group";
-
-                let headerHtml = `
-                    <div class="pack-group-header">
-                        <span>${catName}</span>
-                        <span style="font-size:0.8rem; color:#666;">(${catItems.filter(i=>i.checked).length}/${catItems.length})</span>
-                    </div>
-                `;
-
-                let listHtml = `<ul class="pack-list">`;
+                let packGroup = document.createElement("div"); packGroup.className = "pack-group";
+                let listHtml = `<div class="pack-group-header"><span>${catName}</span><span style="font-size:0.8rem; color:#666;">(${catItems.filter(i=>i.checked).length}/${catItems.length})</span></div><ul class="pack-list">`;
                 catItems.forEach(item => {
-                    let checkedClass = item.checked ? "checked" : "";
-                    let isCheckedAttr = item.checked ? "checked" : "";
-
-                    listHtml += `
-                        <li class="pack-item ${checkedClass}">
-                            <div class="item-top">
-                                <div class="item-detail">
-                                    <input type="checkbox" class="pack-checkbox" ${isCheckedAttr} onchange="togglePackItem(${item.originalIndex})">
-                                    <span class="pack-text">${item.name}</span>
-                                </div>
-                                <button class="btn-action" onclick="deletePackItem(${item.originalIndex})">🗑️</button>
-                            </div>
-                        </li>
-                    `;
+                    listHtml += `<li class="pack-item ${item.checked ? 'checked' : ''}"><div class="item-top"><div class="item-detail"><input type="checkbox" class="pack-checkbox" ${item.checked ? 'checked' : ''} onchange="togglePackItem(${item.originalIndex})"><span class="pack-text">${item.name}</span></div><button class="btn-action" onclick="deletePackItem(${item.originalIndex})">🗑️</button></div></li>`;
                 });
-                listHtml += `</ul>`;
-                packGroup.innerHTML = headerHtml + listHtml;
-                container.appendChild(packGroup);
+                packGroup.innerHTML = listHtml + `</ul>`; container.appendChild(packGroup);
             }
         });
     }
 
     function togglePackItem(index) {
         packingItems[index].checked = !packingItems[index].checked;
-        renderPackingList();
+        db.ref('packing').set(packingItems); // 同步到雲端
     }
-
     function addPackingItem() {
-        let cat = document.getElementById("pack-cat").value;
-        let name = document.getElementById("pack-item-name").value;
-
+        let cat = document.getElementById("pack-cat").value, name = document.getElementById("pack-item-name").value;
         if (name) {
-            packingItems.push({ cat: cat, name: name, checked: false });
-            renderPackingList();
+            packingItems.push({ cat, name, checked: false });
+            db.ref('packing').set(packingItems); // 同步到雲端
             document.getElementById("pack-item-name").value = "";
         }
     }
-
-    // 加入再次確認防誤觸
     function deletePackItem(index) {
-        if (confirm("確定要從清單中移除這個物品嗎？")) {
+        if (confirm("確定移除這個物品嗎？")) {
             packingItems.splice(index, 1);
-            renderPackingList();
+            db.ref('packing').set(packingItems); // 同步到雲端
         }
     }
 
     window.onload = function() {
-        renderItineraries();
+        initFirebaseSync();
         autoSelectDay();
         fetchLiveRate();
-        renderPackingList();
     };
 </script>
 
