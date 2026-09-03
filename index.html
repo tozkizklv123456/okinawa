@@ -89,8 +89,6 @@
         .event-form-row input, .event-form-row textarea, .event-form-row select {
             padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.85rem; width: 100%;
         }
-        .input-time { flex: 1; min-width: 80px; }
-        .input-title { flex: 2; min-width: 150px; }
         .btn-add-event {
             background: var(--primary-color); color: white; border: none;
             padding: 0.6rem 1rem; border-radius: 6px; cursor: pointer;
@@ -200,7 +198,7 @@
         <button class="tab-btn" onclick="openTab(event, 'd5')">Day 5<br><small>9/13</small></button>
         <button class="tab-btn book-tab" onclick="openTab(event, 'book')">💰 記帳<br><small>即時同步</small></button>
         <button class="tab-btn pack-tab" onclick="openTab(event, 'packing')">🧳 行李<br><small>對照表</small></button>
-        <button class="tab-btn sos-tab" onclick="openTab(event, 'sos')">🆘 備案<br><small>求救專區</small></button>
+        <button class="tab-btn sos-tab" onclick="openTab(event, 'sos')">🆘 備案<br><small>即時編輯</small></button>
     </div>
 
     <div id="itinerary-container"></div>
@@ -277,31 +275,28 @@
         </div>
     </div>
 
-    <!-- 🆘 備案與緊急救援專區 -->
+    <!-- 🆘 動態備案與求救專區 -->
     <div id="sos" class="tab-content">
         <div class="sos-card">
             <div class="sos-header">
-                <span class="sos-title">🆘 緊急救援與雨天備案專區</span>
-            </div>
-            
-            <div class="sos-group">
-                <div class="sos-group-header"><span>🚨 當地緊急求助電話</span></div>
-                <ul class="sos-list">
-                    <li class="sos-item"><div class="item-top"><span>警察局 (報警)</span><a href="tel:110" class="sos-btn">📞 撥打 110</a></div></li>
-                    <li class="sos-item"><div class="item-top"><span>救護車 / 火災</span><a href="tel:119" class="sos-btn">📞 撥打 119</a></div></li>
-                    <li class="sos-item"><div class="item-top"><span>租車公司 / 道路救援</span><span style="font-size:0.8rem; color:#666;">(取車時填寫)</span></div></li>
-                </ul>
+                <span class="sos-title">🆘 備案與緊急救援專區 (全家同步)</span>
             </div>
 
-            <div class="sos-group">
-                <div class="sos-group-header"><span>🌧️ 老幼同行・雨天室內備案景點 (Plan B)</span></div>
-                <ul class="sos-list" style="font-size:0.9rem; line-height:1.6; color:#444;">
-                    <li>🛒 <b>永旺夢樂城 (AEON MALL Rycom)：</b> 室內超大型商場，適合雨天逛街、吃美食、長輩坐沙發休息。</li>
-                    <li>🐠 <b>DMM Kariyushi 水族館：</b> 位於豐見城，全新室內沉浸式水族館，雨天備案第一首選。</li>
-                    <li>🛍️ <b>浦添 Parco City：</b> 沖繩最新最大海濱購物中心，無障礙電梯與親子設施極佳。</li>
-                    <li>🦕 <b>DINO恐龍公園 (山原亞熱帶之森)：</b> 若遇小雨，戶外有遮蔽林道，小孩放電好去處。</li>
-                </ul>
+            <div class="packing-form" style="border-color: #f08c00;">
+                <div class="form-row">
+                    <select id="sos-cat">
+                        <option value="🚨 緊急求助電話">🚨 緊急求助電話</option>
+                        <option value="🌧️ 雨天備案與口袋景點">🌧️ 雨天備案與口袋景點</option>
+                    </select>
+                    <input type="text" id="sos-item-title" placeholder="標題 (如: 警察局 / 某某室內商場)">
+                </div>
+                <div class="form-row">
+                    <input type="text" id="sos-item-desc" placeholder="詳細說明或電話號碼 (如: 110 或 備用雨天行程說明)">
+                </div>
+                <button class="btn-add-event" style="background:#f08c00;" onclick="addSosItem()">➕ 新增備案或聯絡資訊</button>
             </div>
+            
+            <div id="sos-list-container"></div>
         </div>
     </div>
 </div>
@@ -361,7 +356,14 @@
         { cat: "💊 藥品與日常護理", name: "常備藥品 (感冒、暈車藥)", checked: false }
     ];
 
-    let itineraryData = {}, expenses = [], packingItems = [];
+    const defaultSosItems = [
+        { cat: "🚨 緊急求助電話", title: "警察局 (報警)", desc: "110" },
+        { cat: "🚨 緊急求助電話", title: "救護車 / 火災", desc: "119" },
+        { cat: "🌧️ 雨天備案與口袋景點", title: "永旺夢樂城 (AEON MALL Rycom)", desc: "室內超大型商場，適合雨天逛街、吃美食、長輩休息。" },
+        { cat: "🌧️ 雨天備案與口袋景點", title: "DMM Kariyushi 水族館", desc: "位於豐見城，全新室內沉浸式水族館，雨天備案首選。" }
+    ];
+
+    let itineraryData = {}, expenses = [], packingItems = [], sosItems = [];
 
     function initFirebaseSync() {
         db.ref('itinerary').on('value', (snapshot) => {
@@ -381,6 +383,13 @@
             packingItems = data ? data : defaultPackingItems;
             if (!data) db.ref('packing').set(defaultPackingItems);
             renderPackingList();
+        });
+
+        db.ref('sos').on('value', (snapshot) => {
+            const data = snapshot.val();
+            sosItems = data ? data : defaultSosItems;
+            if (!data) db.ref('sos').set(defaultSosItems);
+            renderSosList();
         });
     }
 
@@ -626,6 +635,60 @@
     function deletePackItem(index) {
         if (confirm("確定要從清單中移除這個物品嗎？")) {
             packingItems.splice(index, 1); db.ref('packing').set(packingItems);
+        }
+    }
+
+    // === 動態備案與求救專區邏輯 ===
+    function renderSosList() {
+        let container = document.getElementById("sos-list-container"); container.innerHTML = "";
+        let categories = ["🚨 緊急求助電話", "🌧️ 雨天備案與口袋景點"];
+
+        categories.forEach(catName => {
+            let catItems = sosItems.map((item, originalIndex) => ({...item, originalIndex})).filter(item => item.cat === catName);
+            if (catItems.length > 0) {
+                let sosGroup = document.createElement("div"); sosGroup.className = "sos-group";
+                let listHtml = `<div class="sos-group-header"><span>${catName}</span><span style="font-size:0.8rem; color:#666;">(${catItems.length})</span></div><ul class="sos-list">`;
+                catItems.forEach(item => {
+                    let actionHtml = "";
+                    if (catName === "🚨 緊急求助電話") {
+                        actionHtml = `<a href="tel:${item.desc}" class="sos-btn">📞 撥打 ${item.desc}</a>`;
+                    } else {
+                        actionHtml = `<span style="font-size:0.85rem; color:#555;">${item.desc}</span>`;
+                    }
+
+                    listHtml += `
+                        <li class="sos-item">
+                            <div class="item-top">
+                                <div class="item-detail" style="flex-direction:column; align-items:flex-start; gap:0.2rem;">
+                                    <b>${item.title}</b>
+                                    ${actionHtml}
+                                </div>
+                                <button class="btn-action" onclick="deleteSosItem(${item.originalIndex})">🗑️</button>
+                            </div>
+                        </li>
+                    `;
+                });
+                listHtml += `</ul>`; sosGroup.innerHTML = listHtml; container.appendChild(sosGroup);
+            }
+        });
+    }
+
+    function addSosItem() {
+        let cat = document.getElementById("sos-cat").value;
+        let title = document.getElementById("sos-item-title").value;
+        let desc = document.getElementById("sos-item-desc").value;
+        if (title && desc) {
+            sosItems.push({ cat, title, desc });
+            db.ref('sos').set(sosItems);
+            document.getElementById("sos-item-title").value = "";
+            document.getElementById("sos-item-desc").value = "";
+        }
+    }
+
+    function deleteSosItem(index) {
+        if (confirm("確定要刪除這個備案或聯絡資訊嗎？")) {
+            sosItems.splice(index, 1);
+            db.ref('sos').set(sosItems);
         }
     }
 
