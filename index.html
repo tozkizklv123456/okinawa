@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>沖繩 5 天 4 夜老幼同樂自駕助手 (雲端同步版)</title>
-    <!-- 引入 SheetJS 匯出 Excel 套件 -->
+    <title>沖繩 5 天 4 夜老幼同樂自駕助手 (旗艦雲端版)</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- 引入 Firebase SDK (Compat 版本，最適合前端網頁即時同步) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
     <style>
@@ -52,12 +50,12 @@
         }
         .tab-btn {
             flex: 1;
-            min-width: 60px;
+            min-width: 55px;
             padding: 0.8rem 0.2rem;
             text-align: center;
             border: none;
             background: none;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             font-weight: bold;
             color: #666;
             cursor: pointer;
@@ -69,15 +67,11 @@
             background-color: var(--secondary-color);
         }
         .tab-btn.book-tab { color: var(--accent-color); }
-        .tab-btn.book-tab.active {
-            border-bottom-color: var(--accent-color);
-            background-color: #fff0f0;
-        }
+        .tab-btn.book-tab.active { border-bottom-color: var(--accent-color); background-color: #fff0f0; }
         .tab-btn.pack-tab { color: #5c7cfa; }
-        .tab-btn.pack-tab.active {
-            border-bottom-color: #5c7cfa;
-            background-color: #edf2ff;
-        }
+        .tab-btn.pack-tab.active { border-bottom-color: #5c7cfa; background-color: #edf2ff; }
+        .tab-btn.sos-tab { color: #f08c00; }
+        .tab-btn.sos-tab.active { border-bottom-color: #f08c00; background-color: #fff9db; }
 
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -92,13 +86,11 @@
         }
         .add-event-box h4 { margin: 0 0 0.6rem 0; color: var(--primary-color); font-size: 0.95rem; }
         .event-form-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
-        .event-form-row input, .event-form-row textarea {
-            padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.85rem;
+        .event-form-row input, .event-form-row textarea, .event-form-row select {
+            padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.85rem; width: 100%;
         }
         .input-time { flex: 1; min-width: 80px; }
         .input-title { flex: 2; min-width: 150px; }
-        .input-query { width: 100%; }
-        .input-desc { width: 100%; height: 45px; resize: vertical; }
         .btn-add-event {
             background: var(--primary-color); color: white; border: none;
             padding: 0.6rem 1rem; border-radius: 6px; cursor: pointer;
@@ -118,28 +110,17 @@
             margin-bottom: 1rem;
             box-shadow: 0 2px 6px rgba(0,0,0,0.04);
             cursor: grab;
-            transition: transform 0.2s, box-shadow 0.2s;
             user-select: none;
         }
         .event-card:active { cursor: grabbing; }
-        .event-card.dragging {
-            opacity: 0.5;
-            background: #e6f2f2;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
-        }
+        .event-card.dragging { opacity: 0.5; background: #e6f2f2; }
         .event-card::before {
-            content: '';
-            position: absolute;
-            left: -22px;
-            top: 18px;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: var(--primary-color);
-            border: 2px solid white;
+            content: ''; position: absolute; left: -22px; top: 18px;
+            width: 10px; height: 10px; border-radius: 50%;
+            background: var(--primary-color); border: 2px solid white;
         }
         .event-header { display: flex; justify-content: space-between; align-items: center; }
-        .drag-handle { cursor: grab; color: #aaa; font-size: 1.2rem; margin-right: 0.4rem; display: inline-block; }
+        .drag-handle { cursor: grab; color: #aaa; font-size: 1.2rem; margin-right: 0.4rem; }
         .time-tag { display: inline-block; background: var(--secondary-color); color: var(--primary-color); font-weight: bold; font-size: 0.8rem; padding: 0.2rem 0.5rem; border-radius: 4px; }
         .event-title { font-size: 1.05rem; font-weight: bold; margin: 0.4rem 0 0.3rem 0; }
         .event-desc { font-size: 0.9rem; color: #555; margin-bottom: 0.6rem; white-space: pre-line; }
@@ -147,20 +128,24 @@
         .nav-btn {
             display: inline-flex; align-items: center; gap: 0.3rem; background-color: #4285F4;
             color: white; text-decoration: none; font-size: 0.85rem; padding: 0.4rem 0.8rem;
-            border-radius: 20px; font-weight: bold; margin-top: 0.3rem; box-shadow: 0 2px 4px rgba(66,133,244,0.3);
+            border-radius: 20px; font-weight: bold; margin-top: 0.3rem;
         }
         .btn-action { background: none; border: none; cursor: pointer; font-size: 0.85rem; padding: 0.1rem 0.3rem; opacity: 0.7; }
         .btn-action:hover { opacity: 1; }
 
-        .expense-card, .packing-card {
+        .expense-card, .packing-card, .sos-card {
             background: var(--card-bg); border-radius: 12px; padding: 1.2rem;
             box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 1.2rem;
         }
         .expense-card { border-top: 4px solid var(--accent-color); }
         .packing-card { border-top: 4px solid #5c7cfa; }
+        .sos-card { border-top: 4px solid #f08c00; }
 
-        .expense-header, .packing-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #eee; }
-        .expense-title, .packing-title { font-weight: bold; font-size: 1.2rem; }
+        .expense-header, .packing-header, .sos-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #eee;
+        }
+        .expense-title, .packing-title, .sos-title { font-weight: bold; font-size: 1.2rem; }
         .expense-totals { text-align: right; }
         .total-jpy { font-size: 1.3rem; font-weight: bold; color: var(--accent-color); }
         .total-twd { font-size: 0.85rem; color: #666; }
@@ -169,21 +154,17 @@
         .rate-left { display: flex; align-items: center; gap: 0.4rem; }
         .rate-setting input { width: 65px; padding: 0.2rem 0.3rem; font-size: 0.85rem; border: 1px solid #ccc; border-radius: 4px; }
         .btn-update-rate { background: #e7f5ff; color: #1c7ed6; border: 1px solid #74c0fc; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-weight: bold; }
-        .btn-export-excel { background: #21a366; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 0.3rem; box-shadow: 0 2px 4px rgba(33,163,102,0.2); }
+        .btn-export-excel { background: #21a366; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 0.3rem; }
 
         .expense-form, .packing-form { display: flex; flex-direction: column; gap: 0.6rem; background: #fafafa; padding: 1rem; border-radius: 8px; border: 1px solid #eee; margin-bottom: 1.2rem; }
-        .form-row { display: flex; gap: 0.5rem; }
-        .expense-form input, .expense-form select, .packing-form input, .packing-form select { padding: 0.6rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; }
-        .input-date { flex: 1.2; }
-        .input-name { flex: 2; }
-        .input-cost { flex: 1.2; }
-        .select-pay { flex: 1; }
-
-        .day-group, .pack-group { margin-bottom: 1.5rem; background: white; border-radius: 8px; padding: 0.8rem 1rem; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
-        .day-group-header, .pack-group-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 0.95rem; color: var(--primary-color); padding-bottom: 0.4rem; border-bottom: 2px solid var(--secondary-color); margin-bottom: 0.5rem; }
-        .expense-list, .pack-list { list-style: none; padding: 0; margin: 0; }
-        .expense-item, .pack-item { padding: 0.5rem 0; border-bottom: 1px dashed #eee; font-size: 0.85rem; }
-        .expense-item:last-child, .pack-item:last-child { border-bottom: none; }
+        .form-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .expense-form input, .expense-form select, .packing-form input, .packing-form select { padding: 0.6rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; flex: 1; }
+        
+        .day-group, .pack-group, .sos-group { margin-bottom: 1.5rem; background: white; border-radius: 8px; padding: 0.8rem 1rem; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+        .day-group-header, .pack-group-header, .sos-group-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 0.95rem; color: var(--primary-color); padding-bottom: 0.4rem; border-bottom: 2px solid var(--secondary-color); margin-bottom: 0.5rem; }
+        .expense-list, .pack-list, .sos-list { list-style: none; padding: 0; margin: 0; }
+        .expense-item, .pack-item, .sos-item { padding: 0.5rem 0; border-bottom: 1px dashed #eee; font-size: 0.85rem; }
+        .expense-item:last-child, .pack-item:last-child, .sos-item:last-child { border-bottom: none; }
         .item-top { display: flex; justify-content: space-between; align-items: center; }
         .item-detail { display: flex; align-items: center; gap: 0.4rem; }
         .time-stamp { font-size: 0.75rem; color: #888; background: #f0f0f0; padding: 0.1rem 0.3rem; border-radius: 3px; }
@@ -196,13 +177,18 @@
         .pack-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: #5c7cfa; }
         .progress-bar-bg { background: #eee; border-radius: 10px; height: 10px; width: 100%; margin-bottom: 1rem; overflow: hidden; }
         .progress-bar-fill { background: #5c7cfa; height: 100%; width: 0%; transition: width 0.3s ease; }
+
+        .sos-btn {
+            background-color: #e03131; color: white; text-decoration: none; padding: 0.3rem 0.6rem;
+            border-radius: 4px; font-size: 0.8rem; font-weight: bold; display: inline-flex; align-items: center; gap: 0.2rem;
+        }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>🚗 沖繩 5 天 4 夜慢活助手 (雲端即時同步版)</h1>
-    <p>全平面道路漫遊・無障礙友善行程</p>
+    <h1>🚗 沖繩 5 天 4 夜老幼同樂自駕助手</h1>
+    <p>全平面道路漫遊・無障礙友善行程・全家雲端同步</p>
 </header>
 
 <div class="container">
@@ -212,12 +198,14 @@
         <button class="tab-btn" onclick="openTab(event, 'd3')">Day 3<br><small>9/11</small></button>
         <button class="tab-btn" onclick="openTab(event, 'd4')">Day 4<br><small>9/12</small></button>
         <button class="tab-btn" onclick="openTab(event, 'd5')">Day 5<br><small>9/13</small></button>
-        <button class="tab-btn book-tab" onclick="openTab(event, 'book')">💰 記帳本<br><small>雲端同步</small></button>
-        <button class="tab-btn pack-tab" onclick="openTab(event, 'packing')">🧳 行李清單<br><small>雲端同步</small></button>
+        <button class="tab-btn book-tab" onclick="openTab(event, 'book')">💰 記帳<br><small>即時同步</small></button>
+        <button class="tab-btn pack-tab" onclick="openTab(event, 'packing')">🧳 行李<br><small>對照表</small></button>
+        <button class="tab-btn sos-tab" onclick="openTab(event, 'sos')">🆘 備案<br><small>求救專區</small></button>
     </div>
 
     <div id="itinerary-container"></div>
 
+    <!-- 記帳頁 -->
     <div id="book" class="tab-content">
         <div class="expense-card">
             <div class="expense-header">
@@ -232,10 +220,10 @@
                 <div class="rate-left">
                     <span>💱 匯率:</span>
                     <input type="number" id="exchange-rate" value="0.22" step="0.0001" onchange="updateTotals()">
-                    <button class="btn-update-rate" onclick="fetchLiveRate()">🔄 即時更新</button>
+                    <button class="btn-update-rate" onclick="fetchLiveRate()">🔄 即時</button>
                     <span id="rate-status" style="font-size:0.75rem; color:#888;"></span>
                 </div>
-                <button class="btn-export-excel" onclick="exportToExcel()">📊 匯出 Excel 報表</button>
+                <button class="btn-export-excel" onclick="exportToExcel()">📊 匯出 Excel</button>
             </div>
 
             <div class="expense-form">
@@ -253,30 +241,27 @@
                     </select>
                 </div>
                 <div class="form-row">
-                    <input type="text" id="exp-name" class="input-name" placeholder="消費項目 (如: 燒肉王)">
-                    <input type="number" id="exp-cost" class="input-cost" placeholder="日圓金額">
+                    <input type="text" id="exp-name" placeholder="消費項目 (如: 燒肉王)">
+                    <input type="number" id="exp-cost" placeholder="日圓金額">
                 </div>
-                <button class="btn-add-event" id="btn-save-exp" onclick="addExpense()">新增消費紀錄</button>
+                <button class="btn-add-event" onclick="addExpense()">新增消費紀錄</button>
             </div>
 
             <div id="classified-expense-container"></div>
         </div>
     </div>
 
+    <!-- 行李頁 -->
     <div id="packing" class="tab-content">
         <div class="packing-card">
             <div class="packing-header">
-                <span class="packing-title">🧳 出國行李準備清單 (全家即時同步)</span>
+                <span class="packing-title">🧳 出國行李準備清單</span>
                 <span id="pack-progress-text" style="font-size:0.9rem; font-weight:bold; color:#5c7cfa;">0 / 0 (0%)</span>
             </div>
-
-            <div class="progress-bar-bg">
-                <div class="progress-bar-fill" id="pack-progress-bar"></div>
-            </div>
-
+            <div class="progress-bar-bg"><div class="progress-bar-fill" id="pack-progress-bar"></div></div>
             <div class="packing-form">
                 <div class="form-row">
-                    <select id="pack-cat" class="input-date">
+                    <select id="pack-cat">
                         <option value="📄 證件與重要文件">📄 證件與重要文件</option>
                         <option value="📱 電子產品與充電">📱 電子產品與充電</option>
                         <option value="👕 衣物與個人用品">👕 衣物與個人用品</option>
@@ -284,18 +269,44 @@
                         <option value="👶 小孩生活用品">👶 小孩生活用品</option>
                         <option value="💊 藥品與日常護理">💊 藥品與日常護理</option>
                     </select>
-                    <input type="text" id="pack-item-name" class="input-name" placeholder="物品名稱 (如: 護照、輪椅充電器)">
+                    <input type="text" id="pack-item-name" placeholder="物品名稱 (如: 護照)">
                 </div>
-                <button class="btn-add-event" style="background:#5c7cfa;" onclick="addPackingItem()">➕ 新增準備物品</button>
+                <button class="btn-add-event" style="background:#5c7cfa;" onclick="addPackingItem()">➕ 新增行李物品</button>
+            </div>
+            <div id="packing-list-container"></div>
+        </div>
+    </div>
+
+    <!-- 🆘 備案與緊急救援專區 -->
+    <div id="sos" class="tab-content">
+        <div class="sos-card">
+            <div class="sos-header">
+                <span class="sos-title">🆘 緊急救援與雨天備案專區</span>
+            </div>
+            
+            <div class="sos-group">
+                <div class="sos-group-header"><span>🚨 當地緊急求助電話</span></div>
+                <ul class="sos-list">
+                    <li class="sos-item"><div class="item-top"><span>警察局 (報警)</span><a href="tel:110" class="sos-btn">📞 撥打 110</a></div></li>
+                    <li class="sos-item"><div class="item-top"><span>救護車 / 火災</span><a href="tel:119" class="sos-btn">📞 撥打 119</a></div></li>
+                    <li class="sos-item"><div class="item-top"><span>租車公司 / 道路救援</span><span style="font-size:0.8rem; color:#666;">(取車時填寫)</span></div></li>
+                </ul>
             </div>
 
-            <div id="packing-list-container"></div>
+            <div class="sos-group">
+                <div class="sos-group-header"><span>🌧️ 老幼同行・雨天室內備案景點 (Plan B)</span></div>
+                <ul class="sos-list" style="font-size:0.9rem; line-height:1.6; color:#444;">
+                    <li>🛒 <b>永旺夢樂城 (AEON MALL Rycom)：</b> 室內超大型商場，適合雨天逛街、吃美食、長輩坐沙發休息。</li>
+                    <li>🐠 <b>DMM Kariyushi 水族館：</b> 位於豐見城，全新室內沉浸式水族館，雨天備案第一首選。</li>
+                    <li>🛍️ <b>浦添 Parco City：</b> 沖繩最新最大海濱購物中心，無障礙電梯與親子設施極佳。</li>
+                    <li>🦕 <b>DINO恐龍公園 (山原亞熱帶之森)：</b> 若遇小雨，戶外有遮蔽林道，小孩放電好去處。</li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    // === Firebase 雲端資料庫設定 ===
     const firebaseConfig = {
         apiKey: "AIzaSyBZjKuzT5BVEaflbcWbeSiJroSSzyOtzng",
         authDomain: "okinawa-285ae.firebaseapp.com",
@@ -309,7 +320,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 預設資料
     const defaultItineraryData = {
         d1: [
             { id: 'ev_1', time: "下午", title: "✈️ 那霸機場 & 領車", desc: "抵達領車，確認 Toyota Voxy 80 乘坐空間，現場借用輕便輪椅。", query: "Naha Airport" },
@@ -351,51 +361,34 @@
         { cat: "💊 藥品與日常護理", name: "常備藥品 (感冒、暈車藥)", checked: false }
     ];
 
-    let itineraryData = {};
-    let expenses = [];
-    let packingItems = [];
+    let itineraryData = {}, expenses = [], packingItems = [];
 
-    // === 即時從雲端監聽資料變更 ===
     function initFirebaseSync() {
-        // 1. 監聽行程
         db.ref('itinerary').on('value', (snapshot) => {
             const data = snapshot.val();
-            if (data) {
-                itineraryData = data;
-            } else {
-                itineraryData = defaultItineraryData;
-                db.ref('itinerary').set(defaultItineraryData);
-            }
+            itineraryData = data ? data : defaultItineraryData;
+            if (!data) db.ref('itinerary').set(defaultItineraryData);
             renderItineraries();
         });
 
-        // 2. 監聽記帳
         db.ref('expenses').on('value', (snapshot) => {
-            const data = snapshot.val();
-            expenses = data ? data : [];
+            expenses = snapshot.val() ? snapshot.val() : [];
             renderExpenses();
         });
 
-        // 3. 監聽行李清單
         db.ref('packing').on('value', (snapshot) => {
             const data = snapshot.val();
-            if (data) {
-                packingItems = data;
-            } else {
-                packingItems = defaultPackingItems;
-                db.ref('packing').set(defaultPackingItems);
-            }
+            packingItems = data ? data : defaultPackingItems;
+            if (!data) db.ref('packing').set(defaultPackingItems);
             renderPackingList();
         });
     }
 
-    // === 行程表邏輯 ===
     function renderItineraries() {
         let container = document.getElementById("itinerary-container");
         container.innerHTML = "";
         Object.keys(itineraryData).forEach((dayKey, index) => {
-            let dayNum = index + 1;
-            let isActive = dayKey === 'd1' ? 'active' : '';
+            let dayNum = index + 1, isActive = dayKey === 'd1' ? 'active' : '';
             let dayHtml = `
                 <div id="${dayKey}" class="tab-content ${isActive}">
                     <div class="add-event-box">
@@ -450,7 +443,7 @@
                         newArray.push(itineraryData[dayKey][parseInt(c.getAttribute('data-index'))]);
                     });
                     itineraryData[dayKey] = newArray;
-                    db.ref('itinerary').set(itineraryData); // 同步到雲端
+                    db.ref('itinerary').set(itineraryData);
                 });
             });
             timeline.addEventListener('dragover', (e) => {
@@ -487,14 +480,14 @@
             } else {
                 itineraryData[dayKey].push({ id: 'ev_' + Date.now(), time, title, desc, query: navQuery });
             }
-            db.ref('itinerary').set(itineraryData); // 同步到雲端
+            db.ref('itinerary').set(itineraryData);
         }
     }
 
     function deleteEvent(dayKey, index) {
         if (confirm("確定要刪除這個行程嗎？")) {
             itineraryData[dayKey].splice(index, 1);
-            db.ref('itinerary').set(itineraryData); // 同步到雲端
+            db.ref('itinerary').set(itineraryData);
         }
     }
 
@@ -515,11 +508,9 @@
         evt.currentTarget.classList.add("active");
     }
 
-    // === 記帳邏輯 ===
     let editExpIndex = -1;
     function autoSelectDay() {
-        let d = new Date().getDate(), m = new Date().getMonth() + 1;
-        let daySelect = document.getElementById("exp-day");
+        let d = new Date().getDate(), m = new Date().getMonth() + 1, daySelect = document.getElementById("exp-day");
         if (m === 9) {
             if (d === 9) daySelect.value = "Day 1 (9/9)";
             else if (d === 10) daySelect.value = "Day 2 (9/10)";
@@ -537,8 +528,7 @@
             let data = await response.json();
             if (data?.rates?.TWD) {
                 document.getElementById("exchange-rate").value = data.rates.TWD.toFixed(4);
-                statusEl.innerText = "已更新";
-                updateTotals();
+                statusEl.innerText = "已更新"; updateTotals();
             }
         } catch (e) { statusEl.innerText = "無網路"; }
     }
@@ -548,23 +538,16 @@
         let costJpy = parseFloat(document.getElementById("exp-cost").value), payType = document.getElementById("exp-pay").value;
         if (name && costJpy) {
             let timeString = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`;
-            if (editExpIndex === -1) {
-                expenses.push({ day, name, costJpy, payType, time: timeString });
-            } else {
-                expenses[editExpIndex] = { day, name, costJpy, payType, time: timeString };
-                editExpIndex = -1; 
-                document.getElementById("btn-save-exp").innerText = "新增消費紀錄";
-            }
-            db.ref('expenses').set(expenses); // 同步到雲端
-            document.getElementById("exp-name").value = ""; 
-            document.getElementById("exp-cost").value = "";
+            if (editExpIndex === -1) expenses.push({ day, name, costJpy, payType, time: timeString });
+            else { expenses[editExpIndex] = { day, name, costJpy, payType, time: timeString }; editExpIndex = -1; document.getElementById("btn-save-exp").innerText = "新增消費紀錄"; }
+            db.ref('expenses').set(expenses);
+            document.getElementById("exp-name").value = ""; document.getElementById("exp-cost").value = "";
         }
     }
 
     function deleteExpense(index) {
-        if (confirm("確定刪除這筆消費？")) {
-            expenses.splice(index, 1);
-            db.ref('expenses').set(expenses); // 同步到雲端
+        if (confirm("確定要刪除這筆消費紀錄嗎？")) {
+            expenses.splice(index, 1); db.ref('expenses').set(expenses);
         }
     }
 
@@ -574,7 +557,6 @@
         document.getElementById("exp-name").value = item.name;
         document.getElementById("exp-cost").value = item.costJpy;
         document.getElementById("exp-pay").value = item.payType;
-        document.getElementById("btn-save-exp").innerText = "更新紀錄";
     }
 
     function renderExpenses() {
@@ -589,9 +571,8 @@
                 let dayGroup = document.createElement("div"); dayGroup.className = "day-group";
                 let listHtml = `<div class="day-group-header"><span>📅 ${dayName}</span><span>小計: ¥${daySubtotalJpy.toLocaleString()}</span></div><ul class="expense-list">`;
                 dayExpenses.forEach(item => {
-                    let costTwd = Math.round(item.costJpy * rate), isCard = item.payType === "card";
-                    let feeJpy = isCard ? Math.round(item.costJpy * 0.015) : 0;
-                    listHtml += `<li class="expense-item"><div class="item-top"><div class="item-detail"><span class="time-stamp">${item.time}</span>${isCard ? `<span class="pay-badge pay-card">刷卡</span>` : `<span class="pay-badge pay-cash">現金</span>`}<b>${item.name}</b></div><div class="item-actions"><b>¥${item.costJpy.toLocaleString()}</b> <button class="btn-action" onclick="editExpense(${item.originalIndex})">✏️</button><button class="btn-action" onclick="deleteExpense(${item.originalIndex})">🗑️</button></div></div>${isCard ? `<div class="fee-note">💳 含 1.5% 刷卡手續費：+¥${feeJpy.toLocaleString()}</div>` : ''}</li>`;
+                    let isCard = item.payType === "card", feeJpy = isCard ? Math.round(item.costJpy * 0.015) : 0;
+                    listHtml += `<li class="expense-item"><div class="item-top"><div class="item-detail"><span class="time-stamp">${item.time}</span>${isCard ? `<span class="pay-badge pay-card">刷卡</span>` : `<span class="pay-badge pay-cash">現金</span>`}<b>${item.name}</b></div><div class="item-actions"><b>¥${item.costJpy.toLocaleString()}</b> <button class="btn-action" onclick="editExpense(${item.originalIndex})">✏️</button><button class="btn-action" onclick="deleteExpense(${item.originalIndex})">🗑️</button></div></div>${isCard ? `<div class="fee-note">💳 含 1.5% 手續費：+¥${feeJpy.toLocaleString()}</div>` : ''}</li>`;
                 });
                 dayGroup.innerHTML = listHtml + `</ul>`; container.appendChild(dayGroup);
             }
@@ -606,13 +587,12 @@
         let rate = parseFloat(document.getElementById("exchange-rate").value) || 0.22, excelData = [];
         expenses.forEach((item, i) => {
             let isCard = item.payType === "card";
-            excelData.push({ "項次": i+1, "消費日期": item.day, "記錄時間": item.time, "消費項目": item.name, "支付方式": isCard?"刷卡":"現金", "日圓": item.costJpy, "台幣": Math.round(item.costJpy*rate), "備註": isCard?"含1.5%手續費":"" });
+            excelData.push({ "項次": i+1, "消費日期": item.day, "記錄時間": item.time, "消費項目": item.name, "支付方式": isCard?"刷卡":"現金", "日圓": item.costJpy, "台幣": Math.round(item.costJpy*rate) });
         });
         let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelData), "消費明細");
         XLSX.writeFile(wb, `沖繩消費明細_${new Date().getMonth()+1}月${new Date().getDate()}日.xlsx`);
     }
 
-    // === 行李清單邏輯 ===
     function renderPackingList() {
         let container = document.getElementById("packing-list-container"); container.innerHTML = "";
         let checkedCount = packingItems.filter(i => i.checked).length, percent = packingItems.length === 0 ? 0 : Math.round((checkedCount / packingItems.length) * 100);
@@ -634,20 +614,18 @@
 
     function togglePackItem(index) {
         packingItems[index].checked = !packingItems[index].checked;
-        db.ref('packing').set(packingItems); // 同步到雲端
+        db.ref('packing').set(packingItems);
     }
     function addPackingItem() {
         let cat = document.getElementById("pack-cat").value, name = document.getElementById("pack-item-name").value;
         if (name) {
             packingItems.push({ cat, name, checked: false });
-            db.ref('packing').set(packingItems); // 同步到雲端
-            document.getElementById("pack-item-name").value = "";
+            db.ref('packing').set(packingItems); document.getElementById("pack-item-name").value = "";
         }
     }
     function deletePackItem(index) {
-        if (confirm("確定移除這個物品嗎？")) {
-            packingItems.splice(index, 1);
-            db.ref('packing').set(packingItems); // 同步到雲端
+        if (confirm("確定要從清單中移除這個物品嗎？")) {
+            packingItems.splice(index, 1); db.ref('packing').set(packingItems);
         }
     }
 
