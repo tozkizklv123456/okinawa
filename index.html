@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>沖繩 5 天 4 夜老幼同樂自駕助手 (旗艦雲端版)</title>
+    <title>沖繩 5 天 4 夜老幼同樂自駕助手 (極速清爽導航版)</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
@@ -35,7 +35,7 @@
         header p { margin: 0.3rem 0 0; font-size: 0.9rem; opacity: 0.9; }
 
         .container {
-            max-width: 800px;
+            max-width: 850px;
             margin: 0 auto;
             padding: 1rem;
         }
@@ -87,17 +87,20 @@
         .add-event-box h4 { margin: 0 0 0.6rem 0; color: var(--primary-color); font-size: 0.95rem; }
         .event-form-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
         .event-form-row input, .event-form-row textarea, .event-form-row select {
-            padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.85rem; width: 100%;
+            padding: 0.6rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; width: 100%;
+            box-sizing: border-box;
         }
+        .input-time { flex: 1; min-width: 80px; }
+        .input-title { flex: 2; min-width: 150px; }
         .btn-add-event {
             background: var(--primary-color); color: white; border: none;
-            padding: 0.6rem 1rem; border-radius: 6px; cursor: pointer;
-            font-weight: bold; font-size: 0.85rem; width: 100%;
+            padding: 0.7rem 1rem; border-radius: 6px; cursor: pointer;
+            font-weight: bold; font-size: 0.9rem; width: 100%;
         }
 
         .timeline {
             position: relative;
-            padding-left: 15px;
+            padding-left: 20px;
             border-left: 3px solid var(--primary-color);
         }
         .event-card {
@@ -111,25 +114,37 @@
             user-select: none;
         }
         .event-card:active { cursor: grabbing; }
-        .event-card.dragging { opacity: 0.5; background: #e6f2f2; }
+        .event-card.dragging { opacity: 0.4; background: #e6f2f2; }
         .event-card::before {
-            content: ''; position: absolute; left: -22px; top: 18px;
-            width: 10px; height: 10px; border-radius: 50%;
-            background: var(--primary-color); border: 2px solid white;
+            content: attr(data-seq);
+            position: absolute; left: -30px; top: 14px;
+            width: 22px; height: 22px; border-radius: 50%;
+            background: var(--primary-color); color: white; font-size: 0.8rem; font-weight: bold;
+            display: flex; align-items: center; justify-content: center; border: 2px solid white;
         }
         .event-header { display: flex; justify-content: space-between; align-items: center; }
         .drag-handle { cursor: grab; color: #aaa; font-size: 1.2rem; margin-right: 0.4rem; }
-        .time-tag { display: inline-block; background: var(--secondary-color); color: var(--primary-color); font-weight: bold; font-size: 0.8rem; padding: 0.2rem 0.5rem; border-radius: 4px; }
-        .event-title { font-size: 1.05rem; font-weight: bold; margin: 0.4rem 0 0.3rem 0; }
-        .event-desc { font-size: 0.9rem; color: #555; margin-bottom: 0.6rem; white-space: pre-line; }
+        .time-tag { display: inline-block; background: var(--secondary-color); color: var(--primary-color); font-weight: bold; font-size: 0.85rem; padding: 0.2rem 0.6rem; border-radius: 4px; }
+        .event-title { font-size: 1.1rem; font-weight: bold; margin: 0.4rem 0 0.3rem 0; }
+        .event-desc { font-size: 0.95rem; color: #555; margin-bottom: 0.8rem; white-space: pre-line; }
 
         .nav-btn {
-            display: inline-flex; align-items: center; gap: 0.3rem; background-color: #4285F4;
-            color: white; text-decoration: none; font-size: 0.85rem; padding: 0.4rem 0.8rem;
-            border-radius: 20px; font-weight: bold; margin-top: 0.3rem;
+            display: inline-flex; align-items: center; gap: 0.4rem; background-color: #4285F4;
+            color: white; text-decoration: none; font-size: 0.9rem; padding: 0.5rem 1rem;
+            border-radius: 20px; font-weight: bold; box-shadow: 0 2px 4px rgba(66,133,244,0.3);
         }
-        .btn-action { background: none; border: none; cursor: pointer; font-size: 0.85rem; padding: 0.1rem 0.3rem; opacity: 0.7; }
+        .btn-action { background: none; border: none; cursor: pointer; font-size: 0.9rem; padding: 0.2rem 0.4rem; opacity: 0.7; }
         .btn-action:hover { opacity: 1; }
+
+        .batch-nav-box {
+            background: white; border-radius: 10px; padding: 1rem; margin-top: 1.5rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04); text-align: center;
+        }
+        .batch-nav-btn {
+            display: block; width: 100%; text-align: center; background-color: #339af0; color: white;
+            text-decoration: none; font-size: 0.95rem; font-weight: bold; padding: 0.8rem; border-radius: 8px;
+            box-sizing: border-box; box-shadow: 0 2px 6px rgba(51,154,240,0.3);
+        }
 
         .expense-card, .packing-card, .sos-card {
             background: var(--card-bg); border-radius: 12px; padding: 1.2rem;
@@ -148,59 +163,60 @@
         .total-jpy { font-size: 1.3rem; font-weight: bold; color: var(--accent-color); }
         .total-twd { font-size: 0.85rem; color: #666; }
         
-        .rate-setting { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; background: #f9f9f9; padding: 0.5rem 0.8rem; border-radius: 6px; font-size: 0.85rem; color: #666; margin-bottom: 1rem; }
+        .rate-setting { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; background: #f9f9f9; padding: 0.6rem 0.8rem; border-radius: 6px; font-size: 0.9rem; color: #666; margin-bottom: 1rem; }
         .rate-left { display: flex; align-items: center; gap: 0.4rem; }
-        .rate-setting input { width: 65px; padding: 0.2rem 0.3rem; font-size: 0.85rem; border: 1px solid #ccc; border-radius: 4px; }
-        .btn-update-rate { background: #e7f5ff; color: #1c7ed6; border: 1px solid #74c0fc; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-weight: bold; }
-        .btn-export-excel { background: #21a366; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 0.3rem; }
+        .rate-setting input { width: 70px; padding: 0.3rem; font-size: 0.9rem; border: 1px solid #ccc; border-radius: 4px; }
+        .btn-update-rate { background: #e7f5ff; color: #1c7ed6; border: 1px solid #74c0fc; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer; font-weight: bold; }
+        .btn-export-excel { background: #21a366; color: white; border: none; padding: 0.5rem 0.9rem; border-radius: 6px; font-size: 0.9rem; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 0.3rem; }
 
         .expense-form, .packing-form { display: flex; flex-direction: column; gap: 0.6rem; background: #fafafa; padding: 1rem; border-radius: 8px; border: 1px solid #eee; margin-bottom: 1.2rem; }
         .form-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-        .expense-form input, .expense-form select, .packing-form input, .packing-form select { padding: 0.6rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; flex: 1; }
+        .expense-form input, .expense-form select, .packing-form input, .packing-form select { padding: 0.7rem; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.95rem; flex: 1; }
         
         .day-group, .pack-group, .sos-group { margin-bottom: 1.5rem; background: white; border-radius: 8px; padding: 0.8rem 1rem; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
-        .day-group-header, .pack-group-header, .sos-group-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 0.95rem; color: var(--primary-color); padding-bottom: 0.4rem; border-bottom: 2px solid var(--secondary-color); margin-bottom: 0.5rem; }
+        .day-group-header, .pack-group-header, .sos-group-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 1rem; color: var(--primary-color); padding-bottom: 0.4rem; border-bottom: 2px solid var(--secondary-color); margin-bottom: 0.5rem; }
         .expense-list, .pack-list, .sos-list { list-style: none; padding: 0; margin: 0; }
-        .expense-item, .pack-item, .sos-item { padding: 0.5rem 0; border-bottom: 1px dashed #eee; font-size: 0.85rem; }
+        .expense-item, .pack-item, .sos-item { padding: 0.6rem 0; border-bottom: 1px dashed #eee; font-size: 0.9rem; }
         .expense-item:last-child, .pack-item:last-child, .sos-item:last-child { border-bottom: none; }
         .item-top { display: flex; justify-content: space-between; align-items: center; }
-        .item-detail { display: flex; align-items: center; gap: 0.4rem; }
-        .time-stamp { font-size: 0.75rem; color: #888; background: #f0f0f0; padding: 0.1rem 0.3rem; border-radius: 3px; }
-        .pay-badge { font-size: 0.75rem; padding: 0.1rem 0.3rem; border-radius: 3px; font-weight: bold; }
+        .item-detail { display: flex; align-items: center; gap: 0.5rem; }
+        .time-stamp { font-size: 0.8rem; color: #888; background: #f0f0f0; padding: 0.2rem 0.4rem; border-radius: 3px; }
+        .pay-badge { font-size: 0.8rem; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: bold; }
         .pay-cash { background: #e6fcf5; color: #0ca678; }
         .pay-card { background: #e7f5ff; color: #1c7ed6; }
-        .fee-note { font-size: 0.75rem; color: #d9480f; margin-top: 0.2rem; padding-left: 0.2rem; }
+        .fee-note { font-size: 0.8rem; color: #d9480f; margin-top: 0.3rem; padding-left: 0.2rem; }
 
         .pack-item.checked span.pack-text { text-decoration: line-through; color: #aaa; }
-        .pack-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: #5c7cfa; }
+        .pack-checkbox { width: 20px; height: 20px; cursor: pointer; accent-color: #5c7cfa; }
         .progress-bar-bg { background: #eee; border-radius: 10px; height: 10px; width: 100%; margin-bottom: 1rem; overflow: hidden; }
         .progress-bar-fill { background: #5c7cfa; height: 100%; width: 0%; transition: width 0.3s ease; }
 
         .sos-btn {
-            background-color: #e03131; color: white; text-decoration: none; padding: 0.3rem 0.6rem;
-            border-radius: 4px; font-size: 0.8rem; font-weight: bold; display: inline-flex; align-items: center; gap: 0.2rem;
+            background-color: #e03131; color: white; text-decoration: none; padding: 0.4rem 0.8rem;
+            border-radius: 4px; font-size: 0.85rem; font-weight: bold; display: inline-flex; align-items: center; gap: 0.3rem;
         }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>🚗 沖繩 5 天 4 夜老幼同樂自駕助手</h1>
-    <p>全平面道路漫遊・無障礙友善行程・全家雲端同步</p>
+    <h1>🚗 沖繩 5 天 4 夜自駕助手</h1>
+    <p>極速清爽導航版・拖曳排序即時同步・全家雲端同步</p>
 </header>
 
 <div class="container">
     <div class="tab-nav">
-        <button class="tab-btn active" onclick="openTab(event, 'd1')">Day 1<br><small>9/9</small></button>
-        <button class="tab-btn" onclick="openTab(event, 'd2')">Day 2<br><small>9/10</small></button>
-        <button class="tab-btn" onclick="openTab(event, 'd3')">Day 3<br><small>9/11</small></button>
-        <button class="tab-btn" onclick="openTab(event, 'd4')">Day 4<br><small>9/12</small></button>
-        <button class="tab-btn" onclick="openTab(event, 'd5')">Day 5<br><small>9/13</small></button>
-        <button class="tab-btn book-tab" onclick="openTab(event, 'book')">💰 記帳<br><small>即時同步</small></button>
-        <button class="tab-btn pack-tab" onclick="openTab(event, 'packing')">🧳 行李<br><small>對照表</small></button>
-        <button class="tab-btn sos-tab" onclick="openTab(event, 'sos')">🆘 備案<br><small>即時編輯</small></button>
+        <button class="tab-btn active" id="btn-d1" onclick="openTab(event, 'd1')">Day 1<br><small>9/9</small></button>
+        <button class="tab-btn" id="btn-d2" onclick="openTab(event, 'd2')">Day 2<br><small>9/10</small></button>
+        <button class="tab-btn" id="btn-d3" onclick="openTab(event, 'd3')">Day 3<br><small>9/11</small></button>
+        <button class="tab-btn" id="btn-d4" onclick="openTab(event, 'd4')">Day 4<br><small>9/12</small></button>
+        <button class="tab-btn" id="btn-d5" onclick="openTab(event, 'd5')">Day 5<br><small>9/13</small></button>
+        <button class="tab-btn book-tab" id="btn-book" onclick="openTab(event, 'book')">💰 記帳<br><small>即時同步</small></button>
+        <button class="tab-btn pack-tab" id="btn-packing" onclick="openTab(event, 'packing')">🧳 行李<br><small>對照表</small></button>
+        <button class="tab-btn sos-tab" id="btn-sos" onclick="openTab(event, 'sos')">🆘 備案<br><small>即時編輯</small></button>
     </div>
 
+    <!-- 行程頁面容器 -->
     <div id="itinerary-container"></div>
 
     <!-- 記帳頁 -->
@@ -219,7 +235,7 @@
                     <span>💱 匯率:</span>
                     <input type="number" id="exchange-rate" value="0.22" step="0.0001" onchange="updateTotals()">
                     <button class="btn-update-rate" onclick="fetchLiveRate()">🔄 即時</button>
-                    <span id="rate-status" style="font-size:0.75rem; color:#888;"></span>
+                    <span id="rate-status" style="font-size:0.8rem; color:#888;"></span>
                 </div>
                 <button class="btn-export-excel" onclick="exportToExcel()">📊 匯出 Excel</button>
             </div>
@@ -364,12 +380,17 @@
     ];
 
     let itineraryData = {}, expenses = [], packingItems = [], sosItems = [];
+    let currentActiveTab = 'd1';
 
     function initFirebaseSync() {
         db.ref('itinerary').on('value', (snapshot) => {
             const data = snapshot.val();
-            itineraryData = data ? data : defaultItineraryData;
-            if (!data) db.ref('itinerary').set(defaultItineraryData);
+            if (!data) {
+                db.ref('itinerary').set(defaultItineraryData);
+                itineraryData = defaultItineraryData;
+            } else {
+                itineraryData = data;
+            }
             renderItineraries();
         });
 
@@ -396,45 +417,88 @@
     function renderItineraries() {
         let container = document.getElementById("itinerary-container");
         container.innerHTML = "";
+        
         Object.keys(itineraryData).forEach((dayKey, index) => {
-            let dayNum = index + 1, isActive = dayKey === 'd1' ? 'active' : '';
+            let dayNum = index + 1;
+            let events = itineraryData[dayKey] || [];
+
+            let batchNavUrl = "#";
+            if (events.length > 0) {
+                let origin = encodeURIComponent(events[0].query || events[0].title);
+                let destination = encodeURIComponent(events[events.length - 1].query || events[events.length - 1].title);
+                if (events.length > 2) {
+                    let waypoints = events.slice(1, events.length - 1).map(e => encodeURIComponent(e.query || e.title)).join('|');
+                    batchNavUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypoints}`;
+                } else if (events.length === 2) {
+                    batchNavUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
+                } else {
+                    batchNavUrl = `https://www.google.com/maps/search/?api=1&query=${origin}`;
+                }
+            }
+
             let dayHtml = `
-                <div id="${dayKey}" class="tab-content ${isActive}">
+                <div id="${dayKey}" class="tab-content">
                     <div class="add-event-box">
                         <h4>➕ 為 Day ${dayNum} 新增/編輯景點</h4>
                         <div class="event-form-row">
-                            <input type="text" id="${dayKey}-time" class="input-time" placeholder="時間">
+                            <input type="text" id="${dayKey}-time" class="input-time" placeholder="時間 (如: 10:00)">
                             <input type="text" id="${dayKey}-title" class="input-title" placeholder="景點名稱">
                         </div>
-                        <div class="event-form-row"><input type="text" id="${dayKey}-query" class="input-query" placeholder="📍 導航搜尋字 (留空則用名稱)"></div>
-                        <div class="event-form-row"><textarea id="${dayKey}-desc" class="input-desc" placeholder="備註..."></textarea></div>
+                        <div class="event-form-row"><input type="text" id="${dayKey}-query" class="input-query" placeholder="📍 Google Maps 搜尋關鍵字 (選填，預設同景點名稱)"></div>
+                        <div class="event-form-row"><textarea id="${dayKey}-desc" class="input-desc" placeholder="備註說明..."></textarea></div>
                         <button class="btn-add-event" id="${dayKey}-btn" onclick="saveEvent('${dayKey}')">➕ 加入 Day ${dayNum}</button>
                     </div>
+
                     <div class="timeline" id="${dayKey}-timeline" data-day="${dayKey}">
             `;
-            if (itineraryData[dayKey]) {
-                itineraryData[dayKey].forEach((event, eventIdx) => {
-                    let navQuery = event.query && event.query.trim() !== "" ? event.query : event.title;
-                    dayHtml += `
-                        <div class="event-card" draggable="true" data-index="${eventIdx}">
-                            <div class="event-header">
-                                <div><span class="drag-handle">☰</span><span class="time-tag">${event.time}</span></div>
-                                <div>
-                                    <button class="btn-action" onclick="editEvent('${dayKey}', ${eventIdx})">✏️</button>
-                                    <button class="btn-action" onclick="deleteEvent('${dayKey}', ${eventIdx})">🗑️</button>
-                                </div>
+
+            events.forEach((event, eventIdx) => {
+                let navQuery = event.query && event.query.trim() !== "" ? event.query : event.title;
+                let seqNo = eventIdx + 1;
+                dayHtml += `
+                    <div class="event-card" draggable="true" data-id="${event.id}" data-seq="${seqNo}">
+                        <div class="event-header">
+                            <div><span class="drag-handle">☰</span><span class="time-tag">${event.time}</span></div>
+                            <div>
+                                <button class="btn-action" onclick="editEvent('${dayKey}', '${event.id}')">✏️</button>
+                                <button class="btn-action" onclick="deleteEvent('${dayKey}', '${event.id}')">🗑️</button>
                             </div>
-                            <div class="event-title">${event.title}</div>
-                            <div class="event-desc">${event.desc}</div>
-                            <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(navQuery)}" target="_blank" class="nav-btn">📍 開啟導航</a>
                         </div>
-                    `;
-                });
-            }
-            dayHtml += `</div></div>`;
+                        <div class="event-title">${seqNo}. ${event.title}</div>
+                        <div class="event-desc">${event.desc}</div>
+                        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(navQuery)}" target="_blank" class="nav-btn">📍 開啟 Google Maps 單點導航</a>
+                    </div>
+                `;
+            });
+
+            dayHtml += `
+                    </div>
+                    <div class="batch-nav-box">
+                        <a href="${batchNavUrl}" target="_blank" class="batch-nav-btn">🚗 開啟 Google Maps 全日連續導航 (共 ${events.length} 站)</a>
+                    </div>
+                </div>
+            `;
             container.innerHTML += dayHtml;
         });
+
         initDragAndDrop();
+        restoreActiveTabState();
+    }
+
+    function restoreActiveTabState() {
+        document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        
+        let targetContent = document.getElementById(currentActiveTab);
+        let targetBtn = document.getElementById(`btn-${currentActiveTab}`) || document.querySelector(`[onclick*="'${currentActiveTab}'"]`);
+
+        if (targetContent) targetContent.classList.add("active");
+        if (targetBtn) targetBtn.classList.add("active");
+    }
+
+    function openTab(evt, tabId) {
+        currentActiveTab = tabId;
+        restoreActiveTabState();
     }
 
     function initDragAndDrop() {
@@ -443,15 +507,17 @@
             timeline.querySelectorAll('.event-card').forEach(card => {
                 card.addEventListener('dragstart', (e) => {
                     card.classList.add('dragging');
-                    e.dataTransfer.setData('text/plain', card.getAttribute('data-index'));
                 });
                 card.addEventListener('dragend', () => {
                     card.classList.remove('dragging');
                     let newArray = [];
-                    Array.from(timeline.querySelectorAll('.event-card')).forEach(c => {
-                        newArray.push(itineraryData[dayKey][parseInt(c.getAttribute('data-index'))]);
+                    timeline.querySelectorAll('.event-card').forEach(c => {
+                        let id = c.getAttribute("data-id");
+                        let ev = (itineraryData[dayKey] || []).find(item => item.id === id);
+                        if (ev) newArray.push(ev);
                     });
                     itineraryData[dayKey] = newArray;
+                    currentActiveTab = dayKey;
                     db.ref('itinerary').set(itineraryData);
                 });
             });
@@ -474,7 +540,7 @@
         }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
 
-    let activeEditingDay = null, activeEditingIndex = -1;
+    let activeEditingId = null;
     function saveEvent(dayKey) {
         let time = document.getElementById(`${dayKey}-time`).value;
         let title = document.getElementById(`${dayKey}-title`).value;
@@ -483,38 +549,40 @@
         if (title) {
             let navQuery = query && query.trim() !== "" ? query : title;
             if (!itineraryData[dayKey]) itineraryData[dayKey] = [];
-            if (activeEditingDay === dayKey && activeEditingIndex !== -1) {
-                itineraryData[dayKey][activeEditingIndex] = { id: 'ev_' + Date.now(), time, title, desc, query: navQuery };
-                activeEditingDay = null; activeEditingIndex = -1;
+            
+            if (activeEditingId) {
+                let idx = itineraryData[dayKey].findIndex(e => e.id === activeEditingId);
+                if (idx !== -1) {
+                    itineraryData[dayKey][idx] = { id: activeEditingId, time, title, desc, query: navQuery };
+                }
+                activeEditingId = null;
+                document.getElementById(`${dayKey}-btn`).innerText = `➕ 加入 Day ${dayKey.replace('d','')}`;
             } else {
                 itineraryData[dayKey].push({ id: 'ev_' + Date.now(), time, title, desc, query: navQuery });
             }
+            currentActiveTab = dayKey;
             db.ref('itinerary').set(itineraryData);
         }
     }
 
-    function deleteEvent(dayKey, index) {
+    function deleteEvent(dayKey, eventId) {
         if (confirm("確定要刪除這個行程嗎？")) {
-            itineraryData[dayKey].splice(index, 1);
+            itineraryData[dayKey] = itineraryData[dayKey].filter(e => e.id !== eventId);
+            currentActiveTab = dayKey;
             db.ref('itinerary').set(itineraryData);
         }
     }
 
-    function editEvent(dayKey, index) {
-        activeEditingDay = dayKey; activeEditingIndex = index;
-        let item = itineraryData[dayKey][index];
-        document.getElementById(`${dayKey}-time`).value = item.time;
-        document.getElementById(`${dayKey}-title`).value = item.title;
-        document.getElementById(`${dayKey}-query`).value = item.query || item.title;
-        document.getElementById(`${dayKey}-desc`).value = item.desc;
-        document.getElementById(`${dayKey}-btn`).innerText = "💾 儲存修改";
-    }
-
-    function openTab(evt, tabId) {
-        document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
-        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-        document.getElementById(tabId).classList.add("active");
-        evt.currentTarget.classList.add("active");
+    function editEvent(dayKey, eventId) {
+        let item = (itineraryData[dayKey] || []).find(e => e.id === eventId);
+        if (item) {
+            activeEditingId = eventId;
+            document.getElementById(`${dayKey}-time`).value = item.time;
+            document.getElementById(`${dayKey}-title`).value = item.title;
+            document.getElementById(`${dayKey}-query`).value = item.query || item.title;
+            document.getElementById(`${dayKey}-desc`).value = item.desc;
+            document.getElementById(`${dayKey}-btn`).innerText = "💾 儲存修改";
+        }
     }
 
     let editExpIndex = -1;
@@ -548,7 +616,7 @@
         if (name && costJpy) {
             let timeString = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`;
             if (editExpIndex === -1) expenses.push({ day, name, costJpy, payType, time: timeString });
-            else { expenses[editExpIndex] = { day, name, costJpy, payType, time: timeString }; editExpIndex = -1; document.getElementById("btn-save-exp").innerText = "新增消費紀錄"; }
+            else { expenses[editExpIndex] = { day, name, costJpy, payType, time: timeString }; editExpIndex = -1; }
             db.ref('expenses').set(expenses);
             document.getElementById("exp-name").value = ""; document.getElementById("exp-cost").value = "";
         }
@@ -638,7 +706,6 @@
         }
     }
 
-    // === 動態備案與求救專區邏輯 ===
     function renderSosList() {
         let container = document.getElementById("sos-list-container"); container.innerHTML = "";
         let categories = ["🚨 緊急求助電話", "🌧️ 雨天備案與口袋景點"];
@@ -649,12 +716,9 @@
                 let sosGroup = document.createElement("div"); sosGroup.className = "sos-group";
                 let listHtml = `<div class="sos-group-header"><span>${catName}</span><span style="font-size:0.8rem; color:#666;">(${catItems.length})</span></div><ul class="sos-list">`;
                 catItems.forEach(item => {
-                    let actionHtml = "";
-                    if (catName === "🚨 緊急求助電話") {
-                        actionHtml = `<a href="tel:${item.desc}" class="sos-btn">📞 撥打 ${item.desc}</a>`;
-                    } else {
-                        actionHtml = `<span style="font-size:0.85rem; color:#555;">${item.desc}</span>`;
-                    }
+                    let actionHtml = catName === "🚨 緊急求助電話" 
+                        ? `<a href="tel:${item.desc}" class="sos-btn">📞 撥打 ${item.desc}</a>`
+                        : `<span style="font-size:0.85rem; color:#555;">${item.desc}</span>`;
 
                     listHtml += `
                         <li class="sos-item">
