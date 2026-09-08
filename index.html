@@ -3,13 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>沖繩 5 天 4 夜自駕助手 (智慧登入權限版)</title>
+    <title>沖繩 5 天 4 夜自駕助手 (密碼解鎖版)</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- Firebase App (必須最先載入) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-    <!-- Firebase Database 與 Auth -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
     <style>
         :root {
             --primary-color: #008080;
@@ -235,7 +232,7 @@
     <p>全家雲端同步・檢視唯讀模式</p>
     <div class="auth-bar" id="auth-bar">
         <span id="auth-status">🔒 訪客模式 (唯讀)</span>
-        <button class="auth-btn" id="auth-action-btn" onclick="toggleAuth()">管理者登入</button>
+        <button class="auth-btn" id="auth-action-btn" onclick="toggleAuth()">管理者解鎖</button>
     </div>
 </header>
 
@@ -365,40 +362,53 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const auth = firebase.auth();
 
-    let isAdmin = false;
+    // 設定您的管理者解鎖密碼（您可以自行修改引號內的數字）
+    const ADMIN_PASSWORD = "1234";
+    let isAdmin = localStorage.getItem("okinawa_admin") === "true";
 
-    function toggleAuth() {
-        if (!isAdmin) {
-            let provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithRedirect(provider).catch((error) => {
-                alert("登入失敗: " + error.message);
-            });
-        } else {
-            auth.signOut().then(() => {
-                alert("已登出管理者模式");
-            });
-        }
-    }
-
-    auth.onAuthStateChanged((user) => {
+    function updateAdminUI() {
         let bodyEl = document.getElementById("app-body");
         let statusEl = document.getElementById("auth-status");
         let btnEl = document.getElementById("auth-action-btn");
 
-        if (user) {
-            isAdmin = true;
-            if (bodyEl) bodyEl.classList.add("admin-unlocked");
-            if (statusEl) statusEl.innerText = `🔓 歡迎, ${user.displayName || user.email}`;
-            if (btnEl) btnEl.innerText = "登出";
+        if (isAdmin) {
+            bodyEl.classList.add("admin-unlocked");
+            statusEl.innerText = "🔓 管理者模式 (已解鎖)";
+            btnEl.innerText = "上鎖";
+        } else {
+            bodyEl.classList.remove("admin-unlocked");
+            statusEl.innerText = "🔒 訪客模式 (唯讀)";
+            btnEl.innerText = "管理者解鎖";
+        }
+    }
+
+    function toggleAuth() {
+        if (!isAdmin) {
+            let input = prompt("請輸入管理者解鎖密碼：");
+            if (input === ADMIN_PASSWORD) {
+                isAdmin = true;
+                localStorage.setItem("okinawa_admin", "true");
+                updateAdminUI();
+                renderItineraries();
+                renderExpenses();
+                renderPackingList();
+                renderSosList();
+                alert("解鎖成功！");
+            } else if (input !== null) {
+                alert("密碼錯誤！");
+            }
         } else {
             isAdmin = false;
-            if (bodyEl) bodyEl.classList.remove("admin-unlocked");
-            if (statusEl) statusEl.innerText = "🔒 訪客模式 (唯讀)";
-            if (btnEl) btnEl.innerText = "管理者登入";
+            localStorage.removeItem("okinawa_admin");
+            updateAdminUI();
+            renderItineraries();
+            renderExpenses();
+            renderPackingList();
+            renderSosList();
+            alert("已重新上鎖");
         }
-    });
+    }
 
     const defaultItineraryData = {
         d1: [
@@ -850,10 +860,7 @@
     }
 
     window.onload = function() {
-        auth.getRedirectResult().catch((error) => {
-            console.error("登入錯誤:", error);
-        });
-
+        updateAdminUI();
         initFirebaseSync();
         autoSelectDay();
         fetchLiveRate();
