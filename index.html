@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>沖繩 5 天 4 夜老幼同樂自駕助手 (極速清爽導航版)</title>
+    <title>沖繩 5 天 4 夜自駕助手 (智慧登入權限版)</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Firebase App (必須最先載入) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <!-- Firebase Database 與 Auth -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
     <style>
         :root {
             --primary-color: #008080;
@@ -30,9 +33,33 @@
             text-align: center;
             padding: 1.5rem 1rem;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: relative;
         }
         header h1 { margin: 0; font-size: 1.5rem; }
         header p { margin: 0.3rem 0 0; font-size: 0.9rem; opacity: 0.9; }
+
+        .auth-bar {
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+            background: rgba(255,255,255,0.2);
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .auth-btn {
+            background: white;
+            color: var(--primary-color);
+            border: none;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
 
         .container {
             max-width: 850px;
@@ -76,6 +103,9 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
+        .admin-only { display: none !important; }
+        .admin-unlocked .admin-only { display: block !important; }
+
         .add-event-box {
             background: #ffffff;
             border-radius: 10px;
@@ -110,10 +140,10 @@
             padding: 1rem;
             margin-bottom: 1rem;
             box-shadow: 0 2px 6px rgba(0,0,0,0.04);
-            cursor: grab;
             user-select: none;
         }
-        .event-card:active { cursor: grabbing; }
+        .admin-unlocked .event-card { cursor: grab; }
+        .admin-unlocked .event-card:active { cursor: grabbing; }
         .event-card.dragging { opacity: 0.4; background: #e6f2f2; }
         .event-card::before {
             content: attr(data-seq);
@@ -123,7 +153,8 @@
             display: flex; align-items: center; justify-content: center; border: 2px solid white;
         }
         .event-header { display: flex; justify-content: space-between; align-items: center; }
-        .drag-handle { cursor: grab; color: #aaa; font-size: 1.2rem; margin-right: 0.4rem; }
+        .drag-handle { cursor: grab; color: #aaa; font-size: 1.2rem; margin-right: 0.4rem; display: none; }
+        .admin-unlocked .drag-handle { display: inline; }
         .time-tag { display: inline-block; background: var(--secondary-color); color: var(--primary-color); font-weight: bold; font-size: 0.85rem; padding: 0.2rem 0.6rem; border-radius: 4px; }
         .event-title { font-size: 1.1rem; font-weight: bold; margin: 0.4rem 0 0.3rem 0; }
         .event-desc { font-size: 0.95rem; color: #555; margin-bottom: 0.8rem; white-space: pre-line; }
@@ -197,11 +228,15 @@
         }
     </style>
 </head>
-<body>
+<body id="app-body">
 
 <header>
     <h1>🚗 沖繩 5 天 4 夜自駕助手</h1>
-    <p>極速清爽導航版・拖曳排序即時同步・全家雲端同步</p>
+    <p>全家雲端同步・檢視唯讀模式</p>
+    <div class="auth-bar" id="auth-bar">
+        <span id="auth-status">🔒 訪客模式 (唯讀)</span>
+        <button class="auth-btn" id="auth-action-btn" onclick="toggleAuth()">管理者登入</button>
+    </div>
 </header>
 
 <div class="container">
@@ -240,7 +275,7 @@
                 <button class="btn-export-excel" onclick="exportToExcel()">📊 匯出 Excel</button>
             </div>
 
-            <div class="expense-form">
+            <div class="expense-form admin-only">
                 <div class="form-row">
                     <select id="exp-day" class="input-date">
                         <option value="Day 1 (9/9)">Day 1 (9/9)</option>
@@ -255,7 +290,7 @@
                     </select>
                 </div>
                 <div class="form-row">
-                    <input type="text" id="exp-name" placeholder="消費項目 (如: 燒肉王)">
+                    <input type="text" id="exp-name" placeholder="消費項目 (如: 暖暮拉麵)">
                     <input type="number" id="exp-cost" placeholder="日圓金額">
                 </div>
                 <button class="btn-add-event" onclick="addExpense()">新增消費紀錄</button>
@@ -273,7 +308,7 @@
                 <span id="pack-progress-text" style="font-size:0.9rem; font-weight:bold; color:#5c7cfa;">0 / 0 (0%)</span>
             </div>
             <div class="progress-bar-bg"><div class="progress-bar-fill" id="pack-progress-bar"></div></div>
-            <div class="packing-form">
+            <div class="packing-form admin-only">
                 <div class="form-row">
                     <select id="pack-cat">
                         <option value="📄 證件與重要文件">📄 證件與重要文件</option>
@@ -298,7 +333,7 @@
                 <span class="sos-title">🆘 備案與緊急救援專區 (全家同步)</span>
             </div>
 
-            <div class="packing-form" style="border-color: #f08c00;">
+            <div class="packing-form admin-only" style="border-color: #f08c00;">
                 <div class="form-row">
                     <select id="sos-cat">
                         <option value="🚨 緊急求助電話">🚨 緊急求助電話</option>
@@ -330,6 +365,40 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const auth = firebase.auth();
+
+    let isAdmin = false;
+
+    function toggleAuth() {
+        if (!isAdmin) {
+            let provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch((error) => {
+                alert("登入失敗: " + error.message);
+            });
+        } else {
+            auth.signOut().then(() => {
+                alert("已登出管理者模式");
+            });
+        }
+    }
+
+    auth.onAuthStateChanged((user) => {
+        let bodyEl = document.getElementById("app-body");
+        let statusEl = document.getElementById("auth-status");
+        let btnEl = document.getElementById("auth-action-btn");
+
+        if (user) {
+            isAdmin = true;
+            if (bodyEl) bodyEl.classList.add("admin-unlocked");
+            if (statusEl) statusEl.innerText = `🔓 歡迎, ${user.displayName || user.email}`;
+            if (btnEl) btnEl.innerText = "登出";
+        } else {
+            isAdmin = false;
+            if (bodyEl) bodyEl.classList.remove("admin-unlocked");
+            if (statusEl) statusEl.innerText = "🔒 訪客模式 (唯讀)";
+            if (btnEl) btnEl.innerText = "管理者登入";
+        }
+    });
 
     const defaultItineraryData = {
         d1: [
@@ -345,7 +414,7 @@
         d3: [
             { id: 'ev_7', time: "11:15", title: "🍣 回轉壽司市場 美濱店", desc: "11:30 營業前候位。順遊 Makeman。", query: "Gourmet Kaiten-sushi Yoshi Mihama" },
             { id: 'ev_8', time: "13:30", title: "🛍️ 永旺夢樂城來客夢", desc: "分工血拼，長輩可休息看水族缸。", query: "AEON MALL Okinawa Rycom" },
-            { id: 'ev_9', time: "晚上", title: "🏨 那霸時之宿", desc: "入住飯店，晚上國際通散步。", query: "Toki No Yado Naha" }
+            { id: 'ev_9', time: "晚上", title: "🍜 暖暮拉麵 那霸牧志店", desc: "離國際通極近，步行即可抵達，完美夜宵首選。", query: "暖暮拉麵 那霸牧志店" }
         ],
         d4: [
             { id: 'ev_10', time: "上午", title: "🏯 首里城", desc: "長輩借用輪椅，走無障礙電梯避階梯。", query: "Shurijo Castle" },
@@ -416,6 +485,7 @@
 
     function renderItineraries() {
         let container = document.getElementById("itinerary-container");
+        if (!container) return;
         container.innerHTML = "";
         
         Object.keys(itineraryData).forEach((dayKey, index) => {
@@ -438,13 +508,13 @@
 
             let dayHtml = `
                 <div id="${dayKey}" class="tab-content">
-                    <div class="add-event-box">
+                    <div class="add-event-box admin-only">
                         <h4>➕ 為 Day ${dayNum} 新增/編輯景點</h4>
                         <div class="event-form-row">
                             <input type="text" id="${dayKey}-time" class="input-time" placeholder="時間 (如: 10:00)">
                             <input type="text" id="${dayKey}-title" class="input-title" placeholder="景點名稱">
                         </div>
-                        <div class="event-form-row"><input type="text" id="${dayKey}-query" class="input-query" placeholder="📍 Google Maps 搜尋關鍵字 (選填，預設同景點名稱)"></div>
+                        <div class="event-form-row"><input type="text" id="${dayKey}-query" class="input-query" placeholder="📍 Google Maps 搜尋關鍵字 (選填)"></div>
                         <div class="event-form-row"><textarea id="${dayKey}-desc" class="input-desc" placeholder="備註說明..."></textarea></div>
                         <button class="btn-add-event" id="${dayKey}-btn" onclick="saveEvent('${dayKey}')">➕ 加入 Day ${dayNum}</button>
                     </div>
@@ -459,7 +529,7 @@
                     <div class="event-card" draggable="true" data-id="${event.id}" data-seq="${seqNo}">
                         <div class="event-header">
                             <div><span class="drag-handle">☰</span><span class="time-tag">${event.time}</span></div>
-                            <div>
+                            <div class="admin-only">
                                 <button class="btn-action" onclick="editEvent('${dayKey}', '${event.id}')">✏️</button>
                                 <button class="btn-action" onclick="deleteEvent('${dayKey}', '${event.id}')">🗑️</button>
                             </div>
@@ -506,9 +576,11 @@
             let dayKey = timeline.getAttribute('data-day');
             timeline.querySelectorAll('.event-card').forEach(card => {
                 card.addEventListener('dragstart', (e) => {
+                    if (!isAdmin) { e.preventDefault(); return; }
                     card.classList.add('dragging');
                 });
                 card.addEventListener('dragend', () => {
+                    if (!isAdmin) return;
                     card.classList.remove('dragging');
                     let newArray = [];
                     timeline.querySelectorAll('.event-card').forEach(c => {
@@ -522,8 +594,10 @@
                 });
             });
             timeline.addEventListener('dragover', (e) => {
+                if (!isAdmin) return;
                 e.preventDefault();
                 let draggingCard = timeline.querySelector('.dragging');
+                if (!draggingCard) return;
                 let afterElement = getDragAfterElement(timeline, e.clientY);
                 if (afterElement == null) timeline.appendChild(draggingCard);
                 else timeline.insertBefore(draggingCard, afterElement);
@@ -542,6 +616,7 @@
 
     let activeEditingId = null;
     function saveEvent(dayKey) {
+        if (!isAdmin) return alert("唯讀模式無法修改！");
         let time = document.getElementById(`${dayKey}-time`).value;
         let title = document.getElementById(`${dayKey}-title`).value;
         let query = document.getElementById(`${dayKey}-query`).value;
@@ -566,6 +641,7 @@
     }
 
     function deleteEvent(dayKey, eventId) {
+        if (!isAdmin) return alert("唯讀模式無法刪除！");
         if (confirm("確定要刪除這個行程嗎？")) {
             itineraryData[dayKey] = itineraryData[dayKey].filter(e => e.id !== eventId);
             currentActiveTab = dayKey;
@@ -574,6 +650,7 @@
     }
 
     function editEvent(dayKey, eventId) {
+        if (!isAdmin) return;
         let item = (itineraryData[dayKey] || []).find(e => e.id === eventId);
         if (item) {
             activeEditingId = eventId;
@@ -599,6 +676,7 @@
 
     async function fetchLiveRate() {
         let statusEl = document.getElementById("rate-status");
+        if (!statusEl) return;
         statusEl.innerText = "抓取中...";
         try {
             let response = await fetch("https://open.er-api.com/v6/latest/JPY");
@@ -623,12 +701,14 @@
     }
 
     function deleteExpense(index) {
+        if (!isAdmin) return alert("唯讀模式無法刪除！");
         if (confirm("確定要刪除這筆消費紀錄嗎？")) {
             expenses.splice(index, 1); db.ref('expenses').set(expenses);
         }
     }
 
     function editExpense(index) {
+        if (!isAdmin) return;
         editExpIndex = index; let item = expenses[index];
         document.getElementById("exp-day").value = item.day;
         document.getElementById("exp-name").value = item.name;
@@ -639,6 +719,7 @@
     function renderExpenses() {
         let rate = parseFloat(document.getElementById("exchange-rate").value) || 0.22;
         let container = document.getElementById("classified-expense-container");
+        if (!container) return;
         container.innerHTML = ""; let totalJpy = 0;
         ["Day 1 (9/9)", "Day 2 (9/10)", "Day 3 (9/11)", "Day 4 (9/12)", "Day 5 (9/13)"].forEach(dayName => {
             let dayExpenses = expenses.map((item, originalIndex) => ({...item, originalIndex})).filter(item => item.day === dayName);
@@ -649,7 +730,7 @@
                 let listHtml = `<div class="day-group-header"><span>📅 ${dayName}</span><span>小計: ¥${daySubtotalJpy.toLocaleString()}</span></div><ul class="expense-list">`;
                 dayExpenses.forEach(item => {
                     let isCard = item.payType === "card", feeJpy = isCard ? Math.round(item.costJpy * 0.015) : 0;
-                    listHtml += `<li class="expense-item"><div class="item-top"><div class="item-detail"><span class="time-stamp">${item.time}</span>${isCard ? `<span class="pay-badge pay-card">刷卡</span>` : `<span class="pay-badge pay-cash">現金</span>`}<b>${item.name}</b></div><div class="item-actions"><b>¥${item.costJpy.toLocaleString()}</b> <button class="btn-action" onclick="editExpense(${item.originalIndex})">✏️</button><button class="btn-action" onclick="deleteExpense(${item.originalIndex})">🗑️</button></div></div>${isCard ? `<div class="fee-note">💳 含 1.5% 手續費：+¥${feeJpy.toLocaleString()}</div>` : ''}</li>`;
+                    listHtml += `<li class="expense-item"><div class="item-top"><div class="item-detail"><span class="time-stamp">${item.time}</span>${isCard ? `<span class="pay-badge pay-card">刷卡</span>` : `<span class="pay-badge pay-cash">現金</span>`}<b>${item.name}</b></div><div class="item-actions"><b>¥${item.costJpy.toLocaleString()}</b> <span class="admin-only"><button class="btn-action" onclick="editExpense(${item.originalIndex})">✏️</button><button class="btn-action" onclick="deleteExpense(${item.originalIndex})">🗑️</button></span></div></div>${isCard ? `<div class="fee-note">💳 含 1.5% 手續費：+¥${feeJpy.toLocaleString()}</div>` : ''}</li>`;
                 });
                 dayGroup.innerHTML = listHtml + `</ul>`; container.appendChild(dayGroup);
             }
@@ -671,7 +752,9 @@
     }
 
     function renderPackingList() {
-        let container = document.getElementById("packing-list-container"); container.innerHTML = "";
+        let container = document.getElementById("packing-list-container");
+        if (!container) return;
+        container.innerHTML = "";
         let checkedCount = packingItems.filter(i => i.checked).length, percent = packingItems.length === 0 ? 0 : Math.round((checkedCount / packingItems.length) * 100);
         document.getElementById("pack-progress-text").innerText = `${checkedCount} / ${packingItems.length} (${percent}%)`;
         document.getElementById("pack-progress-bar").style.width = `${percent}%`;
@@ -682,7 +765,9 @@
                 let packGroup = document.createElement("div"); packGroup.className = "pack-group";
                 let listHtml = `<div class="pack-group-header"><span>${catName}</span><span style="font-size:0.8rem; color:#666;">(${catItems.filter(i=>i.checked).length}/${catItems.length})</span></div><ul class="pack-list">`;
                 catItems.forEach(item => {
-                    listHtml += `<li class="pack-item ${item.checked ? 'checked' : ''}"><div class="item-top"><div class="item-detail"><input type="checkbox" class="pack-checkbox" ${item.checked ? 'checked' : ''} onchange="togglePackItem(${item.originalIndex})"><span class="pack-text">${item.name}</span></div><button class="btn-action" onclick="deletePackItem(${item.originalIndex})">🗑️</button></div></li>`;
+                    let checkboxDisabled = !isAdmin ? 'disabled' : '';
+                    let deleteBtnHtml = isAdmin ? `<button class="btn-action" onclick="deletePackItem(${item.originalIndex})">🗑️</button>` : '';
+                    listHtml += `<li class="pack-item ${item.checked ? 'checked' : ''}"><div class="item-top"><div class="item-detail"><input type="checkbox" class="pack-checkbox" ${item.checked ? 'checked' : ''} ${checkboxDisabled} onchange="togglePackItem(${item.originalIndex})"><span class="pack-text">${item.name}</span></div>${deleteBtnHtml}</div></li>`;
                 });
                 packGroup.innerHTML = listHtml + `</ul>`; container.appendChild(packGroup);
             }
@@ -694,6 +779,7 @@
         db.ref('packing').set(packingItems);
     }
     function addPackingItem() {
+        if (!isAdmin) return alert("唯讀模式無法新增！");
         let cat = document.getElementById("pack-cat").value, name = document.getElementById("pack-item-name").value;
         if (name) {
             packingItems.push({ cat, name, checked: false });
@@ -701,13 +787,16 @@
         }
     }
     function deletePackItem(index) {
+        if (!isAdmin) return alert("唯讀模式無法刪除！");
         if (confirm("確定要從清單中移除這個物品嗎？")) {
             packingItems.splice(index, 1); db.ref('packing').set(packingItems);
         }
     }
 
     function renderSosList() {
-        let container = document.getElementById("sos-list-container"); container.innerHTML = "";
+        let container = document.getElementById("sos-list-container");
+        if (!container) return;
+        container.innerHTML = "";
         let categories = ["🚨 緊急求助電話", "🌧️ 雨天備案與口袋景點"];
 
         categories.forEach(catName => {
@@ -720,6 +809,8 @@
                         ? `<a href="tel:${item.desc}" class="sos-btn">📞 撥打 ${item.desc}</a>`
                         : `<span style="font-size:0.85rem; color:#555;">${item.desc}</span>`;
 
+                    let deleteBtnHtml = isAdmin ? `<button class="btn-action" onclick="deleteSosItem(${item.originalIndex})">🗑️</button>` : '';
+
                     listHtml += `
                         <li class="sos-item">
                             <div class="item-top">
@@ -727,7 +818,7 @@
                                     <b>${item.title}</b>
                                     ${actionHtml}
                                 </div>
-                                <button class="btn-action" onclick="deleteSosItem(${item.originalIndex})">🗑️</button>
+                                ${deleteBtnHtml}
                             </div>
                         </li>
                     `;
@@ -738,6 +829,7 @@
     }
 
     function addSosItem() {
+        if (!isAdmin) return alert("唯讀模式無法新增！");
         let cat = document.getElementById("sos-cat").value;
         let title = document.getElementById("sos-item-title").value;
         let desc = document.getElementById("sos-item-desc").value;
@@ -750,6 +842,7 @@
     }
 
     function deleteSosItem(index) {
+        if (!isAdmin) return alert("唯讀模式無法刪除！");
         if (confirm("確定要刪除這個備案或聯絡資訊嗎？")) {
             sosItems.splice(index, 1);
             db.ref('sos').set(sosItems);
