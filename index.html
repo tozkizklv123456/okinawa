@@ -372,7 +372,7 @@
     function toggleAuth() {
         if (!isAdmin) {
             let provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider).catch((error) => {
+            auth.signInWithRedirect(provider).catch((error) => {
                 alert("登入失敗: " + error.message);
             });
         } else {
@@ -850,6 +850,10 @@
     }
 
     window.onload = function() {
+        auth.getRedirectResult().catch((error) => {
+            console.error("登入錯誤:", error);
+        });
+
         initFirebaseSync();
         autoSelectDay();
         fetchLiveRate();
