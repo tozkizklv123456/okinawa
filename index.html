@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>沖繩 5 天 4 夜自駕助手 (記帳台幣標註與幣別選擇版)</title>
+    <title>沖繩 5 天 4 夜自駕助手 (記帳台幣標註與相容修復版)</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
@@ -738,7 +738,7 @@
         document.getElementById("exp-day").value = item.day;
         document.getElementById("exp-currency").value = item.currency || "JPY";
         document.getElementById("exp-name").value = item.name;
-        document.getElementById("exp-cost").value = item.amount;
+        document.getElementById("exp-cost").value = item.amount || item.costJpy;
         document.getElementById("exp-pay").value = item.payType;
     }
 
@@ -762,14 +762,16 @@
                 
                 dayExpenses.forEach(item => {
                     let isCard = item.payType === "card";
+                    let rawAmount = item.amount !== undefined ? item.amount : (item.costJpy || 0);
+                    let curr = item.currency || "JPY";
                     let itemJpy = 0, itemTwd = 0;
 
-                    if (item.currency === "TWD") {
-                        itemTwd = item.amount;
-                        itemJpy = Math.round(item.amount / rate);
+                    if (curr === "TWD") {
+                        itemTwd = rawAmount;
+                        itemJpy = Math.round(rawAmount / rate);
                     } else {
-                        itemJpy = item.amount;
-                        itemTwd = Math.round(item.amount * rate);
+                        itemJpy = rawAmount;
+                        itemTwd = Math.round(rawAmount * rate);
                     }
 
                     if (isCard) {
@@ -780,13 +782,13 @@
                     daySubtotalJpy += itemJpy;
                     daySubtotalTwd += itemTwd;
 
-                    let displayStr = item.currency === "TWD" ? `NT$ ${item.amount.toLocaleString()}` : `¥${item.amount.toLocaleString()}`;
+                    let displayStr = curr === "TWD" ? `NT$ ${rawAmount.toLocaleString()}` : `¥${rawAmount.toLocaleString()}`;
 
                     listHtml += `
                         <li class="expense-item">
                             <div class="item-top">
                                 <div class="item-detail">
-                                    <span class="time-stamp">${item.time}</span>
+                                    <span class="time-stamp">${item.time || "00:00"}</span>
                                     ${isCard ? `<span class="pay-badge pay-card">刷卡</span>` : `<span class="pay-badge pay-cash">現金</span>`}
                                     <b>${item.name}</b>
                                 </div>
@@ -825,14 +827,14 @@
         expenses.forEach((item, i) => {
             let isCard = item.payType === "card";
             let curr = item.currency || "JPY";
-            let amt = item.amount;
+            let amt = item.amount !== undefined ? item.amount : (item.costJpy || 0);
             let twdVal = curr === "TWD" ? amt : Math.round(amt * rate);
             if (isCard) twdVal = Math.round(twdVal * 1.015);
             
             excelData.push({ 
                 "項次": i+1, 
                 "消費日期": item.day, 
-                "記錄時間": item.time, 
+                "記錄時間": item.time || "00:00", 
                 "消費項目": item.name, 
                 "幣別": curr, 
                 "原始金額": amt, 
