@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>沖繩 5 天 4 夜自駕助手 (密碼解鎖版)</title>
+    <title>沖繩 5 天 4 夜自駕助手 (記帳台幣標註與幣別選擇版)</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
@@ -213,6 +213,7 @@
         .pay-cash { background: #e6fcf5; color: #0ca678; }
         .pay-card { background: #e7f5ff; color: #1c7ed6; }
         .fee-note { font-size: 0.8rem; color: #d9480f; margin-top: 0.3rem; padding-left: 0.2rem; }
+        .item-twd-sub { font-size: 0.75rem; color: #666; margin-left: 0.5rem; }
 
         .pack-item.checked span.pack-text { text-decoration: line-through; color: #aaa; }
         .pack-checkbox { width: 20px; height: 20px; cursor: pointer; accent-color: #5c7cfa; }
@@ -281,6 +282,10 @@
                         <option value="Day 4 (9/12)">Day 4 (9/12)</option>
                         <option value="Day 5 (9/13)">Day 5 (9/13)</option>
                     </select>
+                    <select id="exp-currency" class="select-currency">
+                        <option value="JPY">日圓 (JPY)</option>
+                        <option value="TWD">台幣 (TWD)</option>
+                    </select>
                     <select id="exp-pay" class="select-pay">
                         <option value="card">刷卡 (+1.5%)</option>
                         <option value="cash">現金</option>
@@ -288,7 +293,7 @@
                 </div>
                 <div class="form-row">
                     <input type="text" id="exp-name" placeholder="消費項目 (如: 暖暮拉麵)">
-                    <input type="number" id="exp-cost" placeholder="日圓金額">
+                    <input type="number" id="exp-cost" placeholder="金額 (日圓或台幣)">
                 </div>
                 <button class="btn-add-event" onclick="addExpense()">新增消費紀錄</button>
             </div>
@@ -363,7 +368,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 設定您的管理者解鎖密碼（您可以自行修改引號內的數字）
     const ADMIN_PASSWORD = "1234";
     let isAdmin = localStorage.getItem("okinawa_admin") === "true";
 
@@ -699,14 +703,25 @@
     }
 
     function addExpense() {
-        let day = document.getElementById("exp-day").value, name = document.getElementById("exp-name").value;
-        let costJpy = parseFloat(document.getElementById("exp-cost").value), payType = document.getElementById("exp-pay").value;
-        if (name && costJpy) {
+        let day = document.getElementById("exp-day").value;
+        let currency = document.getElementById("exp-currency").value;
+        let name = document.getElementById("exp-name").value;
+        let amount = parseFloat(document.getElementById("exp-cost").value);
+        let payType = document.getElementById("exp-pay").value;
+
+        if (name && amount) {
             let timeString = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`;
-            if (editExpIndex === -1) expenses.push({ day, name, costJpy, payType, time: timeString });
-            else { expenses[editExpIndex] = { day, name, costJpy, payType, time: timeString }; editExpIndex = -1; }
+            let expenseItem = { day, name, currency, amount, payType, time: timeString };
+
+            if (editExpIndex === -1) {
+                expenses.push(expenseItem);
+            } else {
+                expenses[editExpIndex] = expenseItem;
+                editExpIndex = -1;
+            }
             db.ref('expenses').set(expenses);
-            document.getElementById("exp-name").value = ""; document.getElementById("exp-cost").value = "";
+            document.getElementById("exp-name").value = "";
+            document.getElementById("exp-cost").value = "";
         }
     }
 
@@ -721,8 +736,9 @@
         if (!isAdmin) return;
         editExpIndex = index; let item = expenses[index];
         document.getElementById("exp-day").value = item.day;
+        document.getElementById("exp-currency").value = item.currency || "JPY";
         document.getElementById("exp-name").value = item.name;
-        document.getElementById("exp-cost").value = item.costJpy;
+        document.getElementById("exp-cost").value = item.amount;
         document.getElementById("exp-pay").value = item.payType;
     }
 
@@ -730,24 +746,77 @@
         let rate = parseFloat(document.getElementById("exchange-rate").value) || 0.22;
         let container = document.getElementById("classified-expense-container");
         if (!container) return;
-        container.innerHTML = ""; let totalJpy = 0;
+        container.innerHTML = ""; 
+        let totalJpyAll = 0;
+        let totalTwdAll = 0;
+
         ["Day 1 (9/9)", "Day 2 (9/10)", "Day 3 (9/11)", "Day 4 (9/12)", "Day 5 (9/13)"].forEach(dayName => {
             let dayExpenses = expenses.map((item, originalIndex) => ({...item, originalIndex})).filter(item => item.day === dayName);
             if (dayExpenses.length > 0) {
-                let daySubtotalJpy = dayExpenses.reduce((sum, item) => sum + item.costJpy, 0);
-                totalJpy += daySubtotalJpy;
-                let dayGroup = document.createElement("div"); dayGroup.className = "day-group";
-                let listHtml = `<div class="day-group-header"><span>📅 ${dayName}</span><span>小計: ¥${daySubtotalJpy.toLocaleString()}</span></div><ul class="expense-list">`;
+                let daySubtotalJpy = 0;
+                let daySubtotalTwd = 0;
+
+                let dayGroup = document.createElement("div"); 
+                dayGroup.className = "day-group";
+                let listHtml = `<div class="day-group-header"><span>📅 ${dayName}</span><span id="subtotal-${dayName}">小計</span></div><ul class="expense-list">`;
+                
                 dayExpenses.forEach(item => {
-                    let isCard = item.payType === "card", feeJpy = isCard ? Math.round(item.costJpy * 0.015) : 0;
-                    listHtml += `<li class="expense-item"><div class="item-top"><div class="item-detail"><span class="time-stamp">${item.time}</span>${isCard ? `<span class="pay-badge pay-card">刷卡</span>` : `<span class="pay-badge pay-cash">現金</span>`}<b>${item.name}</b></div><div class="item-actions"><b>¥${item.costJpy.toLocaleString()}</b> <span class="admin-only"><button class="btn-action" onclick="editExpense(${item.originalIndex})">✏️</button><button class="btn-action" onclick="deleteExpense(${item.originalIndex})">🗑️</button></span></div></div>${isCard ? `<div class="fee-note">💳 含 1.5% 手續費：+¥${feeJpy.toLocaleString()}</div>` : ''}</li>`;
+                    let isCard = item.payType === "card";
+                    let itemJpy = 0, itemTwd = 0;
+
+                    if (item.currency === "TWD") {
+                        itemTwd = item.amount;
+                        itemJpy = Math.round(item.amount / rate);
+                    } else {
+                        itemJpy = item.amount;
+                        itemTwd = Math.round(item.amount * rate);
+                    }
+
+                    if (isCard) {
+                        itemJpy = Math.round(itemJpy * 1.015);
+                        itemTwd = Math.round(itemTwd * 1.015);
+                    }
+
+                    daySubtotalJpy += itemJpy;
+                    daySubtotalTwd += itemTwd;
+
+                    let displayStr = item.currency === "TWD" ? `NT$ ${item.amount.toLocaleString()}` : `¥${item.amount.toLocaleString()}`;
+
+                    listHtml += `
+                        <li class="expense-item">
+                            <div class="item-top">
+                                <div class="item-detail">
+                                    <span class="time-stamp">${item.time}</span>
+                                    ${isCard ? `<span class="pay-badge pay-card">刷卡</span>` : `<span class="pay-badge pay-cash">現金</span>`}
+                                    <b>${item.name}</b>
+                                </div>
+                                <div class="item-actions">
+                                    <b>${displayStr}</b> <span class="item-twd-sub">(約 NT$ ${itemTwd.toLocaleString()})</span>
+                                    <span class="admin-only">
+                                        <button class="btn-action" onclick="editExpense(${item.originalIndex})">✏️</button>
+                                        <button class="btn-action" onclick="deleteExpense(${item.originalIndex})">🗑️</button>
+                                    </span>
+                                </div>
+                            </div>
+                            ${isCard ? `<div class="fee-note">💳 含 1.5% 手續費</div>` : ''}
+                        </li>`;
                 });
-                dayGroup.innerHTML = listHtml + `</ul>`; container.appendChild(dayGroup);
+
+                totalJpyAll += daySubtotalJpy;
+                totalTwdAll += daySubtotalTwd;
+
+                dayGroup.innerHTML = listHtml + `</ul>`; 
+                container.appendChild(dayGroup);
+
+                let subHeader = document.getElementById(`subtotal-${dayName}`);
+                if(subHeader) subHeader.innerText = `小計: ¥${daySubtotalJpy.toLocaleString()} (約 NT$ ${daySubtotalTwd.toLocaleString()})`;
             }
         });
-        document.getElementById("total-jpy").innerText = totalJpy.toLocaleString();
-        document.getElementById("total-twd").innerText = Math.round(totalJpy * rate).toLocaleString();
+
+        document.getElementById("total-jpy").innerText = totalJpyAll.toLocaleString();
+        document.getElementById("total-twd").innerText = totalTwdAll.toLocaleString();
     }
+
     function updateTotals() { renderExpenses(); }
 
     function exportToExcel() {
@@ -755,7 +824,21 @@
         let rate = parseFloat(document.getElementById("exchange-rate").value) || 0.22, excelData = [];
         expenses.forEach((item, i) => {
             let isCard = item.payType === "card";
-            excelData.push({ "項次": i+1, "消費日期": item.day, "記錄時間": item.time, "消費項目": item.name, "支付方式": isCard?"刷卡":"現金", "日圓": item.costJpy, "台幣": Math.round(item.costJpy*rate) });
+            let curr = item.currency || "JPY";
+            let amt = item.amount;
+            let twdVal = curr === "TWD" ? amt : Math.round(amt * rate);
+            if (isCard) twdVal = Math.round(twdVal * 1.015);
+            
+            excelData.push({ 
+                "項次": i+1, 
+                "消費日期": item.day, 
+                "記錄時間": item.time, 
+                "消費項目": item.name, 
+                "幣別": curr, 
+                "原始金額": amt, 
+                "支付方式": isCard?"刷卡":"現金", 
+                "折合台幣(約)": twdVal 
+            });
         });
         let wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelData), "消費明細");
         XLSX.writeFile(wb, `沖繩消費明細_${new Date().getMonth()+1}月${new Date().getDate()}日.xlsx`);
